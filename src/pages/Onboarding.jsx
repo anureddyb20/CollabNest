@@ -2,11 +2,20 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Lightbulb, Code, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { userService } from '../data/userService';
 
 const Onboarding = ({ setUser }) => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // 0: Account, 1: Role, 2: Profile
+  const [accountData, setAccountData] = useState({ name: '', email: '', password: '' });
   const [role, setRole] = useState(null);
   const navigate = useNavigate();
+
+  const handleAccountSubmit = (e) => {
+    e.preventDefault();
+    if (accountData.name && accountData.email) {
+      setStep(1);
+    }
+  };
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
@@ -14,14 +23,82 @@ const Onboarding = ({ setUser }) => {
   };
 
   const handleFinish = () => {
-    setUser({ name: "User", role });
+    const finalUser = userService.registerOrLogin({ ...accountData, role });
+    setUser(finalUser);
     navigate('/hub');
   };
 
   return (
-    <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
       <AnimatePresence mode="wait">
-        {step === 1 ? (
+        {step === 0 ? (
+          <motion.div 
+            key="step0"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="glass-panel"
+            style={{ padding: '48px', maxWidth: '500px', width: '100%' }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Create Account</h2>
+              <p style={{ color: 'var(--text-muted)' }}>Join the community of visionaries and builders.</p>
+            </div>
+            
+            <form onSubmit={handleAccountSubmit}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Full Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={accountData.name}
+                  onChange={(e) => setAccountData({...accountData, name: e.target.value})}
+                  placeholder="John Doe"
+                  style={{ 
+                    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '12px', color: 'white', fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  value={accountData.email}
+                  onChange={(e) => setAccountData({...accountData, email: e.target.value})}
+                  placeholder="john@example.com"
+                  style={{ 
+                    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '12px', color: 'white', fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Password</label>
+                <input 
+                  type="password" 
+                  required
+                  value={accountData.password}
+                  onChange={(e) => setAccountData({...accountData, password: e.target.value})}
+                  placeholder="••••••••"
+                  style={{ 
+                    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '12px', color: 'white', fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <button 
+                type="submit"
+                className="btn-primary" 
+                style={{ width: '100%', justifyContent: 'center', padding: '16px' }}
+              >
+                Continue
+                <ChevronRight size={20} />
+              </button>
+            </form>
+          </motion.div>
+        ) : step === 1 ? (
           <motion.div 
             key="step1"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -31,7 +108,7 @@ const Onboarding = ({ setUser }) => {
             className="glass-panel"
             style={{ padding: '48px', maxWidth: '800px', width: '100%', textAlign: 'center' }}
           >
-            <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Welcome to CoCreateX</h2>
+            <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Welcome, {accountData.name.split(' ')[0]}!</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>Choose your path to get started.</p>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '900px', margin: '0 auto' }}>
@@ -39,7 +116,7 @@ const Onboarding = ({ setUser }) => {
                 className={`glass-card ${role === 'owner' ? 'active-role' : ''}`}
                 style={{ 
                   padding: '40px', cursor: 'pointer', border: role === 'owner' ? '2px solid var(--primary)' : '1px solid var(--border)',
-                  position: 'relative'
+                  position: 'relative', transition: 'all 0.3s ease'
                 }}
                 onClick={() => handleRoleSelect('owner')}
               >
@@ -55,7 +132,8 @@ const Onboarding = ({ setUser }) => {
               <div 
                 className={`glass-card ${role === 'builder' ? 'active-role' : ''}`}
                 style={{ 
-                  padding: '40px', cursor: 'pointer', border: role === 'builder' ? '2px solid var(--primary)' : '1px solid var(--border)'
+                  padding: '40px', cursor: 'pointer', border: role === 'builder' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  transition: 'all 0.3s ease'
                 }}
                 onClick={() => handleRoleSelect('builder')}
               >

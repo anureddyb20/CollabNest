@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Landing from './pages/Landing';
@@ -7,9 +7,17 @@ import Hub from './pages/Hub';
 import Workspace from './pages/Workspace';
 import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
+import { userService } from './data/userService';
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(userService.getCurrentUser());
+
+  useEffect(() => {
+    const session = userService.getCurrentUser();
+    if (session) {
+      setUser(session);
+    }
+  }, []);
 
   return (
     <Router>
@@ -19,7 +27,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding" element={<Onboarding setUser={setUser} />} />
-            <Route path="/hub" element={<Hub />} />
+            <Route path="/hub" element={<Hub user={user} />} />
             <Route path="/workspace/:id" element={<Workspace />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>

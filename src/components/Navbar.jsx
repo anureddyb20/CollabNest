@@ -2,9 +2,15 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Rocket, LayoutGrid as Hub, Layout, User, Zap, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { userService } from '../data/userService';
 
 const Navbar = ({ user }) => {
   const location = useLocation();
+
+  const handleLogout = () => {
+    userService.logout();
+    window.location.href = '/';
+  };
 
   const navLinks = [
     { path: '/hub', label: 'Problem Hub', icon: Hub },
@@ -70,10 +76,14 @@ const Navbar = ({ user }) => {
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '1rem' }}>
             {location.pathname !== '/' ? (
-              <Link to="/" className="btn-outline" style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                onClick={handleLogout}
+                className="btn-outline" 
+                style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+              >
                 <LogOut size={16} />
                 Log Out
-              </Link>
+              </button>
             ) : (
               <Link to="/onboarding" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
                 Get Started
