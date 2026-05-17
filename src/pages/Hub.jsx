@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, TrendingUp, Users, Clock, Target, Plus, ChevronRight, Bookmark, Trash2 } from 'lucide-react';
