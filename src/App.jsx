@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { supabase } from './supabase';
 
 import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
@@ -17,7 +18,19 @@ function App() {
     if (session) {
       setUser(session);
     }
+    
+    // Supabase Connection Test
+    checkConnection();
   }, []);
+
+  async function checkConnection() {
+    const { data, error } = await supabase
+      .from('test')
+      .select('*');
+
+    console.log('SUPABASE DATA:', data);
+    console.log('SUPABASE ERROR:', error);
+  }
 
   return (
     <Router>
