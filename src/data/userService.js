@@ -35,26 +35,49 @@ const getGlobalProblems = () => {
   return Array.from(allMap.values());
 };
 
+const areEmailsSimilar = (e1, e2) => {
+  if (!e1 || !e2) return false;
+  const clean = (e) => e.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+  const c1 = clean(e1.split('@')[0]);
+  const c2 = clean(e2.split('@')[0]);
+  return c1 === c2 || c1.includes(c2) || c2.includes(c1);
+};
+
 export const userService = {
+  areEmailsSimilar,
+
   // Auth
   registerOrLogin: (userData) => {
     const users = getAllUsers();
     const email = userData.email.toLowerCase();
     
     if (users[email]) {
-      // User exists, just save their email in session
+      // User exists, save their email in session
+      // If they have posted problems (with typo-tolerant check), set/upgrade role to 'owner'
+      const storedProblems = getGlobalProblems();
+      const hasPosted = storedProblems.some(p => p.author && areEmailsSimilar(p.author, email));
+      if (hasPosted) {
+        users[email].role = 'owner';
+        saveUsers(users);
+      }
       saveSession({ email });
       return users[email];
     } else {
-      // New user - give them some starter data so it's not empty
+      // New user - starts fresh so they can test joining/submitting
       const newUser = {
         ...userData,
         email,
-        joined: [1, 14], // Starter problems: Decentralized Carbon & AI Crop Diagnosis
-        saved: [19], // AI Radiologist Assistant
-        submissions: [7, 24], // AI Tutor & Smart Grid Optimizer
+        joined: [], 
+        saved: [], 
+        submissions: [], 
         reputation: 30
       };
+      // Check if they already posted problems under similar email
+      const storedProblems = getGlobalProblems();
+      const hasPosted = storedProblems.some(p => p.author && areEmailsSimilar(p.author, email));
+      if (hasPosted || userData.role === 'owner') {
+        newUser.role = 'owner';
+      }
       users[email] = newUser;
       saveUsers(users);
       saveSession({ email });
@@ -141,11 +164,18 @@ export const userService = {
     const user = users[session.email];
     if (!user) return;
     
-    if (!user.joined.includes(problemId)) {
+    const joinedExists = user.joined.some(id => String(id) === String(problemId));
+    if (!joinedExists) {
       user.joined.push(problemId);
       user.reputation += 10;
-      saveUsers(users);
     }
+
+    const subExists = user.submissions.some(id => String(id) === String(problemId));
+    if (!subExists) {
+      user.submissions.push(problemId);
+    }
+    
+    saveUsers(users);
   },
 
   saveProblem: (problemId) => {
@@ -156,10 +186,11 @@ export const userService = {
     const user = users[session.email];
     if (!user) return;
     
-    if (!user.saved.includes(problemId)) {
+    const savedExists = user.saved.some(id => String(id) === String(problemId));
+    if (!savedExists) {
       user.saved.push(problemId);
     } else {
-      user.saved = user.saved.filter(id => id !== problemId);
+      user.saved = user.saved.filter(id => String(id) !== String(problemId));
     }
     saveUsers(users);
   },
@@ -172,7 +203,8 @@ export const userService = {
     const user = users[session.email];
     if (!user) return;
     
-    if (!user.submissions.includes(problemId)) {
+    const exists = user.submissions.some(id => String(id) === String(problemId));
+    if (!exists) {
       user.submissions.push(problemId);
       saveUsers(users);
     }
@@ -187,7 +219,7 @@ export const userService = {
     if (!user) return [];
     
     const all = getGlobalProblems();
-    return all.filter(p => user.joined.includes(p.id) || p.author === session.email);
+    return all.filter(p => user.joined.some(id => String(id) === String(p.id)) || p.author === session.email);
   },
 
   getSavedProblems: () => {
@@ -198,7 +230,7 @@ export const userService = {
     if (!user) return [];
     
     const all = getGlobalProblems();
-    return all.filter(p => user.saved.includes(p.id));
+    return all.filter(p => user.saved.some(id => String(id) === String(p.id)));
   },
 
   getSubmissions: () => {
@@ -209,6 +241,38 @@ export const userService = {
     if (!user) return [];
     
     const all = getGlobalProblems();
-    return all.filter(p => user.submissions.includes(p.id) || p.author === session.email);
+    return all.filter(p => user.submissions.some(id => String(id) === String(p.id)) || p.author === session.email);
+  },
+
+  getApplicantsForProblem: (problemId) => {
+    const users = getAllUsers();
+    const applicants = [];
+    Object.keys(users).forEach(email => {
+      if (users[email].submissions && users[email].submissions.some(id => String(id) === String(problemId))) {
+        applicants.push(users[email]);
+      }
+    });
+    return applicants;
+  },
+
+  updateProblem: (problemId, updatedFields) => {
+    const stored = localStorage.getItem(PROBLEMS_KEY);
+    const userProblems = stored ? JSON.parse(stored) : [];
+    
+    // Find if the problem already exists in userProblems
+    const existingIndex = userProblems.findIndex(p => String(p.id) === String(problemId));
+    
+    if (existingIndex !== -1) {
+      userProblems[existingIndex] = { ...userProblems[existingIndex], ...updatedFields };
+    } else {
+      // Find from static problems list
+      const allProblems = getGlobalProblems();
+      const staticProb = allProblems.find(p => String(p.id) === String(problemId));
+      if (staticProb) {
+        userProblems.push({ ...staticProb, ...updatedFields });
+      }
+    }
+    
+    localStorage.setItem(PROBLEMS_KEY, JSON.stringify(userProblems));
   }
 };

@@ -10,7 +10,10 @@ const Hub = ({ user: initialUser }) => {
   const [displayProblems, setDisplayProblems] = useState(userService.getAllProblems());
   const [userData, setUserData] = useState(userService.getCurrentUser() || { joined: [], saved: [], submissions: [], reputation: 0 });
   const [showPostModal, setShowPostModal] = useState(false);
-  const [newProblem, setNewProblem] = useState({ title: '', domain: 'Sustainability', impact: 'High', desc: '', skills: [] });
+  const [newProblem, setNewProblem] = useState({ 
+    title: '', domain: 'Sustainability', difficulty: 'Medium', desc: '', skills: [],
+    expectedOutcome: '', projectGoals: '', teamSize: 5
+  });
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -40,12 +43,24 @@ const Hub = ({ user: initialUser }) => {
   }, [activeSidebar, activeFilter, refreshKey]);
 
   const handleJoin = (id) => {
+    const session = userService.getCurrentUser();
+    if (!session) {
+      alert('Please log in or create an account first to join a team!');
+      window.location.href = '/onboarding';
+      return;
+    }
     userService.joinTeam(id);
     setRefreshKey(prev => prev + 1);
   };
 
   const handleSave = (e, id) => {
     e.stopPropagation();
+    const session = userService.getCurrentUser();
+    if (!session) {
+      alert('Please log in or create an account first to save problems!');
+      window.location.href = '/onboarding';
+      return;
+    }
     userService.saveProblem(id);
     setRefreshKey(prev => prev + 1);
   };
@@ -61,6 +76,12 @@ const Hub = ({ user: initialUser }) => {
 
   const handleSubmitProposal = (e, id) => {
     e.stopPropagation();
+    const session = userService.getCurrentUser();
+    if (!session) {
+      alert('Please log in or create an account first to submit a proposal!');
+      window.location.href = '/onboarding';
+      return;
+    }
     userService.submitProposal(id);
     setUserData(userService.getCurrentUser() || { joined: [], saved: [], submissions: [], reputation: 0 });
     alert('Submission successful! You can track it in the Submissions tab.');
@@ -71,7 +92,10 @@ const Hub = ({ user: initialUser }) => {
     userService.addProblem(newProblem);
     setShowPostModal(false);
     setDisplayProblems(userService.getAllProblems());
-    setNewProblem({ title: '', domain: 'Sustainability', impact: 'High', desc: '', skills: [] });
+    setNewProblem({ 
+      title: '', domain: 'Sustainability', difficulty: 'Medium', desc: '', skills: [],
+      expectedOutcome: '', projectGoals: '', teamSize: 5
+    });
   };
 
   return (
@@ -261,13 +285,13 @@ const Hub = ({ user: initialUser }) => {
                       }}
                       style={{ 
                         background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                        color: userData.saved.includes(p.id) ? 'var(--primary)' : 'var(--text-dim)',
+                        color: userData.saved.some(id => String(id) === String(p.id)) ? 'var(--primary)' : 'var(--text-dim)',
                         cursor: 'pointer', transition: 'var(--transition)',
                         width: '42px', height: '42px', borderRadius: '12px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}
                     >
-                      <Bookmark size={20} fill={userData.saved.includes(p.id) ? 'var(--primary)' : 'none'} />
+                      <Bookmark size={20} fill={userData.saved.some(id => String(id) === String(p.id)) ? 'var(--primary)' : 'none'} />
                     </button>
                   </div>
 
@@ -306,18 +330,28 @@ const Hub = ({ user: initialUser }) => {
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{p.team.current}/{p.team.total} builders</span>
                       </div>
                       
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {activeSidebar === 'Problems' && !userData.joined.includes(p.id) && (
-                          <button 
-                            className="btn-outline" 
-                            style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '8px' }}
-                            onClick={(e) => handleSubmitProposal(e, p.id)}
-                          >
-                            Submit
-                          </button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {activeSidebar === 'Problems' && p.author !== userData.email && !userData.joined.some(id => String(id) === String(p.id)) && (
+                          userData.submissions.some(id => String(id) === String(p.id)) ? (
+                            <span style={{ color: '#4ade80', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }}>
+                              ✓ Submitted
+                            </span>
+                          ) : (
+                            <button 
+                              className="btn-outline" 
+                              style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '8px' }}
+                              onClick={(e) => handleSubmitProposal(e, p.id)}
+                            >
+                              Submit
+                            </button>
+                          )
                         )}
                         
-                        {userData.joined.includes(p.id) ? (
+                        {p.author === userData.email ? (
+                          <span style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            👑 Owner
+                          </span>
+                        ) : userData.joined.some(id => String(id) === String(p.id)) ? (
                           <span style={{ color: 'var(--secondary)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <ChevronRight size={16} /> Joined
                           </span>
@@ -360,29 +394,30 @@ const Hub = ({ user: initialUser }) => {
 
       {/* Post Problem Modal */}
       {showPostModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(10px)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(10px)', padding: '20px' }}>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="glass-panel"
-            style={{ padding: '40px', maxWidth: '600px', width: '90%' }}
+            style={{ padding: '40px', maxWidth: '800px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <h2 style={{ marginBottom: '24px' }}>Post New Problem</h2>
+            <h2 style={{ marginBottom: '24px' }}>Post New Idea / Problem Statement</h2>
             <form onSubmit={handlePostProblem}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Problem Title</label>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Project Title</label>
                 <input 
                   type="text" 
                   required
                   value={newProblem.title}
                   onChange={(e) => setNewProblem({...newProblem, title: e.target.value})}
                   style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white' }}
-                  placeholder="Summarize the challenge..."
+                  placeholder="e.g., AI-Powered Crop Disease Diagnostics"
                 />
               </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Domain</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Domain / Category</label>
                   <select 
                     value={newProblem.domain}
                     onChange={(e) => setNewProblem({...newProblem, domain: e.target.value})}
@@ -392,29 +427,89 @@ const Hub = ({ user: initialUser }) => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Impact Level</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Difficulty Level</label>
                   <select 
-                    value={newProblem.impact}
-                    onChange={(e) => setNewProblem({...newProblem, impact: e.target.value})}
+                    value={newProblem.difficulty}
+                    onChange={(e) => setNewProblem({...newProblem, difficulty: e.target.value})}
                     className="custom-select"
                   >
-                    {['Low', 'Medium', 'High', 'Critical'].map(i => <option key={i}>{i}</option>)}
+                    {['Beginner', 'Intermediate', 'Advanced', 'Expert'].map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
               </div>
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Description</label>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Detailed Description</label>
                 <textarea 
                   required
                   value={newProblem.desc}
                   onChange={(e) => setNewProblem({...newProblem, desc: e.target.value})}
-                  style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white', minHeight: '120px' }}
-                  placeholder="Describe the problem and what you are looking for..."
+                  style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white', minHeight: '100px' }}
+                  placeholder="Describe the problem, current challenges, and your vision..."
                 />
               </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Expected Outcome</label>
+                  <input 
+                    type="text" 
+                    value={newProblem.expectedOutcome}
+                    onChange={(e) => setNewProblem({...newProblem, expectedOutcome: e.target.value})}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white' }}
+                    placeholder="e.g., A working MVP mobile app"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Project Goals</label>
+                  <input 
+                    type="text" 
+                    value={newProblem.projectGoals}
+                    onChange={(e) => setNewProblem({...newProblem, projectGoals: e.target.value})}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white' }}
+                    placeholder="e.g., Reach 1,000 beta users"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', marginBottom: '32px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Team Size Needed</label>
+                  <input 
+                    type="number" 
+                    min="1" max="20"
+                    value={newProblem.teamSize}
+                    onChange={(e) => setNewProblem({...newProblem, teamSize: parseInt(e.target.value)})}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', color: 'white' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Required Skills / Roles (Select multiple)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {['Frontend', 'Backend', 'UI/UX', 'AI/ML', 'App Dev', 'Marketing'].map(skill => (
+                      <label key={skill} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={newProblem.skills.includes(skill)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewProblem({...newProblem, skills: [...newProblem.skills, skill]});
+                            } else {
+                              setNewProblem({...newProblem, skills: newProblem.skills.filter(s => s !== skill)});
+                            }
+                          }}
+                          style={{ accentColor: 'var(--primary)' }}
+                        />
+                        {skill}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn-ghost" onClick={() => setShowPostModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Post to Hub</button>
+                <button type="submit" className="btn-primary">Post Idea</button>
               </div>
             </form>
           </motion.div>
