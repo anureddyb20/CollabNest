@@ -247,9 +247,29 @@ export const userService = {
   getApplicantsForProblem: (problemId) => {
     const users = getAllUsers();
     const applicants = [];
+    
+    // Get the target problem to compare titles
+    const allProblems = getGlobalProblems();
+    const targetProblem = allProblems.find(p => String(p.id) === String(problemId));
+    const targetTitle = targetProblem ? targetProblem.title.toLowerCase().trim() : '';
+
     Object.keys(users).forEach(email => {
-      if (users[email].submissions && users[email].submissions.some(id => String(id) === String(problemId))) {
-        applicants.push(users[email]);
+      if (users[email].submissions) {
+        const hasMatch = users[email].submissions.some(id => {
+          if (String(id) === String(problemId)) return true;
+          // Fallback: match by title to handle duplicate testing posts
+          if (targetTitle) {
+            const subProblem = allProblems.find(p => String(p.id) === String(id));
+            if (subProblem && subProblem.title.toLowerCase().trim() === targetTitle) {
+              return true;
+            }
+          }
+          return false;
+        });
+        
+        if (hasMatch) {
+          applicants.push(users[email]);
+        }
       }
     });
     return applicants;

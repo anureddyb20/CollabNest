@@ -76,21 +76,12 @@ const Workspace = () => {
     const dbApplicants = userService.getApplicantsForProblem(selectedProblem.id);
     const acceptedEmails = (selectedProblem.acceptedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
     const rejectedEmails = (selectedProblem.rejectedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
-    const showMock = !acceptedEmails.includes('anu@cocreatex.com') && !rejectedEmails.includes('anu@cocreatex.com');
     
     const filteredApplicants = dbApplicants.filter(
       app => !acceptedEmails.includes(app.email.toLowerCase()) && !rejectedEmails.includes(app.email.toLowerCase())
     );
     
-    if (filteredApplicants.length > 0) {
-      setLocalApplicants(filteredApplicants);
-    } else if (showMock) {
-      setLocalApplicants([
-        { email: "anu@cocreatex.com", name: "anu", reputation: 50, skills: ["Frontend"] }
-      ]);
-    } else {
-      setLocalApplicants([]);
-    }
+    setLocalApplicants(filteredApplicants);
 
     setTasks({
       todo: ["Implement " + (selectedProblem.skills[0] || "Frontend"), "Research " + selectedProblem.domain + " market"],
