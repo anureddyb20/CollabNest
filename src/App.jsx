@@ -8,6 +8,7 @@ import Onboarding from './pages/Onboarding';
 import Hub from './pages/Hub';
 import Workspace from './pages/Workspace';
 import Profile from './pages/Profile';
+import BuilderHub from './pages/BuilderHub';
 import Navbar from './components/Navbar';
 import { userService } from './data/userService';
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding" element={<Onboarding setUser={setUser} />} />
             <Route path="/hub" element={<Hub user={user} />} />
+            <Route path="/builder" element={<BuilderHub user={user} />} />
             <Route path="/workspace/:id" element={<Workspace />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>

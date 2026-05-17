@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Rocket, LayoutGrid as Hub, Layout, User, Zap, LogOut } from 'lucide-react';
+import { Rocket, LayoutGrid as Hub, Layout, User, Zap, LogOut, Hammer } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { userService } from '../data/userService';
 
@@ -14,6 +14,7 @@ const Navbar = ({ user }) => {
 
   const navLinks = [
     { path: '/hub', label: 'Problem Hub', icon: Hub },
+    { path: '/builder', label: 'I Want to Build', icon: Hammer },
     { path: '/workspace/1', label: 'Workspace', icon: Layout },
     { path: '/profile', label: 'Portfolio', icon: User },
   ];
