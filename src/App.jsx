@@ -15,10 +15,10 @@ function App() {
   const [user, setUser] = useState(userService.getCurrentUser());
 
   async function checkConnection() {
+    if (!supabase) return; // No env vars configured yet
     const { data, error } = await supabase
       .from('test')
       .select('*');
-
     console.log('SUPABASE DATA:', data);
     console.log('SUPABASE ERROR:', error);
   }
