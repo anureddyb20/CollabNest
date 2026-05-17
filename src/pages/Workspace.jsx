@@ -48,58 +48,7 @@ const Workspace = () => {
   // 3. Applicants State (load real applicants or mock one)
   const [localApplicants, setLocalApplicants] = useState([]);
   
-  useEffect(() => {
-    // Reset states when the selected problem changes
-    setStageIndex(2);
-    
-    // Load dynamic team from localStorage if exists, merged with default owner members
-    const defaultTeam = [
-      { name: "Anu", role: "Product Owner", activity: "High", contributions: 10 },
-      { name: "Alex", role: "UI Designer", activity: "High", contributions: 12 },
-    ];
-    const initialTeam = selectedProblem.acceptedMembers ? [...defaultTeam, ...selectedProblem.acceptedMembers] : defaultTeam;
-    setTeam(initialTeam);
-    
-    // Load dynamic rejected members
-    const initialRejected = selectedProblem.rejectedMembers || [];
-    setRejectedList(initialRejected);
 
-    // Load contribution logs
-    const defaultLogs = [
-      { text: "Alex Rivera joined the team as UI Designer", date: "2 days ago" },
-      { text: "Anu created the project and posted requirements", date: "3 days ago" }
-    ];
-    const initialLogs = selectedProblem.contributionsLogs ? [...defaultLogs, ...selectedProblem.contributionsLogs] : defaultLogs;
-    setContributionLogs(initialLogs);
-    
-    // Load and filter applicants (exclude already accepted/rejected emails)
-    const dbApplicants = userService.getApplicantsForProblem(selectedProblem.id);
-    const acceptedEmails = (selectedProblem.acceptedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
-    const rejectedEmails = (selectedProblem.rejectedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
-    
-    const filteredApplicants = dbApplicants.filter(
-      app => !acceptedEmails.includes(app.email.toLowerCase()) && !rejectedEmails.includes(app.email.toLowerCase())
-    );
-    
-    setLocalApplicants(filteredApplicants);
-
-    setTasks({
-      todo: ["Implement " + (selectedProblem.skills[0] || "Frontend"), "Research " + selectedProblem.domain + " market"],
-      doing: ["Architecture Setup"],
-      done: ["Initial Ideation"]
-    });
-
-    setChatMessages([
-      { sender: "Anu", text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
-      { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
-    ]);
-
-    setDocsList([
-      { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: "Anu", date: "3 days ago" },
-      { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
-      { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: "Anu", date: "4 days ago" }
-    ]);
-  }, [id, selectedProblem.id]);
 
   // 4. Tasks Board State
   const [tasks, setTasks] = useState({
@@ -139,6 +88,59 @@ const Workspace = () => {
 
   // Member Profile overlay state
   const [selectedMemberProfile, setSelectedMemberProfile] = useState(null);
+
+  useEffect(() => {
+    // Reset states when the selected problem changes
+    setStageIndex(2);
+    
+    // Load dynamic team from localStorage if exists, merged with default owner members
+    const defaultTeam = [
+      { name: "Anu", role: "Product Owner", activity: "High", contributions: 10 },
+      { name: "Alex", role: "UI Designer", activity: "High", contributions: 12 },
+    ];
+    const initialTeam = selectedProblem.acceptedMembers ? [...defaultTeam, ...selectedProblem.acceptedMembers] : defaultTeam;
+    setTeam(initialTeam);
+    
+    // Load dynamic rejected members
+    const initialRejected = selectedProblem.rejectedMembers || [];
+    setRejectedList(initialRejected);
+
+    // Load contribution logs
+    const defaultLogs = [
+      { text: "Alex Rivera joined the team as UI Designer", date: "2 days ago" },
+      { text: "Anu created the project and posted requirements", date: "3 days ago" }
+    ];
+    const initialLogs = selectedProblem.contributionsLogs ? [...defaultLogs, ...selectedProblem.contributionsLogs] : defaultLogs;
+    setContributionLogs(initialLogs);
+    
+    // Load and filter applicants (exclude already accepted/rejected emails)
+    const dbApplicants = userService.getApplicantsForProblem(selectedProblem.id);
+    const acceptedEmails = (selectedProblem.acceptedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
+    const rejectedEmails = (selectedProblem.rejectedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
+    
+    const filteredApplicants = dbApplicants.filter(
+      app => app && app.email && !acceptedEmails.includes(app.email.toLowerCase()) && !rejectedEmails.includes(app.email.toLowerCase())
+    );
+    
+    setLocalApplicants(filteredApplicants);
+
+    setTasks({
+      todo: ["Implement " + ((selectedProblem.skills && selectedProblem.skills[0]) || "Frontend"), "Research " + selectedProblem.domain + " market"],
+      doing: ["Architecture Setup"],
+      done: ["Initial Ideation"]
+    });
+
+    setChatMessages([
+      { sender: "Anu", text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
+      { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
+    ]);
+
+    setDocsList([
+      { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: "Anu", date: "3 days ago" },
+      { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
+      { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: "Anu", date: "4 days ago" }
+    ]);
+  }, [id, selectedProblem.id, selectedProblem.title, selectedProblem.acceptedMembers, selectedProblem.rejectedMembers, selectedProblem.contributionsLogs, selectedProblem.skills, selectedProblem.domain]);
 
   const handleMemberClick = (member) => {
     const lowerName = member.name.toLowerCase();
@@ -343,7 +345,7 @@ const Workspace = () => {
             return (
               <div 
                 key={m} 
-                onClick={() => handleMilestoneClick(i)}
+                onClick={() => setStageIndex(i)}
                 style={{ position: 'relative', zIndex: 1, textAlign: 'center', cursor: 'pointer' }}
               >
                 <div style={{ 
