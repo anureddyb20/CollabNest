@@ -13,6 +13,15 @@ import { userService } from './data/userService';
 function App() {
   const [user, setUser] = useState(userService.getCurrentUser());
 
+  async function checkConnection() {
+    const { data, error } = await supabase
+      .from('test')
+      .select('*');
+
+    console.log('SUPABASE DATA:', data);
+    console.log('SUPABASE ERROR:', error);
+  }
+
   useEffect(() => {
     const session = userService.getCurrentUser();
     if (session) {
@@ -22,15 +31,6 @@ function App() {
     // Supabase Connection Test
     checkConnection();
   }, []);
-
-  async function checkConnection() {
-    const { data, error } = await supabase
-      .from('test')
-      .select('*');
-
-    console.log('SUPABASE DATA:', data);
-    console.log('SUPABASE ERROR:', error);
-  }
 
   return (
     <Router>
