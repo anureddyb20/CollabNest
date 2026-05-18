@@ -24,23 +24,23 @@ const Navbar = ({ user }) => {
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      background: 'rgba(2, 6, 23, 0.8)',
+      background: 'rgba(247, 245, 236, 0.85)',
       backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid rgba(255,255,255,0.1)',
+      borderBottom: '1px solid var(--border)',
       padding: '1rem 2rem'
     }}>
       <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ 
-            background: 'linear-gradient(135deg, #8b5cf6, #0ea5e9)',
+            background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
             padding: '8px',
             borderRadius: '12px',
             display: 'flex'
           }}>
-            <Rocket size={24} color="white" />
+            <Rocket size={24} color="#F7F5EC" />
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>
-            CoCreate<span style={{ color: '#8b5cf6' }}>X</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            CoCreate<span style={{ color: 'var(--primary)' }}>X</span>
           </span>
         </Link>
 
@@ -54,12 +54,12 @@ const Navbar = ({ user }) => {
                 to={link.path} 
                 style={{ 
                   textDecoration: 'none', 
-                  color: isActive ? '#fff' : '#94a3b8',
+                  color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   fontSize: '0.9rem',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   transition: 'color 0.2s'
                 }}
               >
@@ -68,7 +68,7 @@ const Navbar = ({ user }) => {
                 {isActive && (
                   <motion.div 
                     layoutId="nav-underline"
-                    style={{ position: 'absolute', bottom: '-1rem', height: '2px', background: '#8b5cf6', width: '100%' }}
+                    style={{ position: 'absolute', bottom: '-1rem', height: '2px', background: 'var(--primary)', width: '100%' }}
                   />
                 )}
               </Link>

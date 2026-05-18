@@ -214,12 +214,12 @@ export default function BuilderHub({ user }) {
         <div style={{ maxWidth: 700 }}>
           {/* Account Details Card */}
           {currentUser && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(16,185,129,0.08))', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, color: 'white', flexShrink: 0, boxShadow: '0 0 16px rgba(139,92,246,0.4)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'linear-gradient(135deg, rgba(96, 114, 92, 0.12), rgba(138, 156, 134, 0.08))', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, color: '#F7F5EC', flexShrink: 0, boxShadow: '0 0 16px var(--primary-glow)' }}>
                 {(currentUser.name || 'U')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 18, color: '#e2e8f0', marginBottom: 2 }}>{currentUser.name || 'User'}</div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-main)', marginBottom: 2 }}>{currentUser.name || 'User'}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{currentUser.email}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Role: <span style={{ color: 'var(--secondary)', fontWeight: 600 }}>{currentUser.role === 'owner' ? 'Visionary / Owner' : currentUser.role === 'builder' ? 'Builder' : 'Explorer'}</span></div>
               </div>
