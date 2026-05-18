@@ -24,7 +24,7 @@ const Navbar = ({ user }) => {
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      background: 'rgba(247, 245, 236, 0.85)',
+      background: 'rgba(255, 255, 255, 0.85)',
       backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
       padding: '1rem 2rem'
