@@ -599,8 +599,9 @@ const Workspace = () => {
                         </span> • {msg.time}
                       </div>
                       <div style={{ 
-                        background: isMe ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                        border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', fontSize: '0.9rem', color: 'white'
+                        background: isMe ? 'var(--primary)' : 'rgba(96, 114, 92, 0.05)',
+                        border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', fontSize: '0.9rem', 
+                        color: isMe ? 'white' : 'var(--text-main)'
                       }}>
                         {msg.text}
                       </div>
@@ -615,8 +616,8 @@ const Workspace = () => {
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Type a message..."
                   style={{ 
-                    flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                    borderRadius: '12px', padding: '12px', color: 'white'
+                    flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '12px', color: 'var(--text-main)'
                   }}
                 />
                 <button type="submit" className="btn-primary" style={{ padding: '0 24px' }}>Send</button>
