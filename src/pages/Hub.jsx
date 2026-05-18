@@ -219,9 +219,12 @@ const Hub = ({ user: initialUser }) => {
                   onClick={() => setActiveFilter(filter)}
                   style={{ 
                     padding: '8px 24px', borderRadius: '12px', border: '1px solid var(--border)',
-                    background: activeFilter === filter ? 'var(--primary)' : 'var(--bg-surface)',
-                    color: 'white', cursor: 'pointer', transition: 'var(--transition)',
-                    whiteSpace: 'nowrap', fontWeight: 500
+                    borderBottom: '3px solid var(--primary)',
+                    borderRight: '3px solid var(--primary)',
+                    background: activeFilter === filter ? 'var(--primary)' : 'var(--bg-card)',
+                    color: activeFilter === filter ? '#FFFFFF' : 'var(--text-main)', 
+                    cursor: 'pointer', transition: 'var(--transition)',
+                    whiteSpace: 'nowrap', fontWeight: 600
                   }}
                 >
                   {filter}
