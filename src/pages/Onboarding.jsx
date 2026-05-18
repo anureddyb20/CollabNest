@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Lightbulb, Code, ChevronRight, CheckCircle2 } from 'lucide-react';
@@ -22,14 +22,45 @@ const Onboarding = ({ setUser }) => {
   });
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Clear session when entering onboarding to start fresh!
+    userService.logout();
+    setUser(null);
+  }, []);
+
   const handleAccountSubmit = (e) => {
     e.preventDefault();
     if (accountData.name && accountData.email) {
-      if (isLoginMode) {
-        // Authenticate/Log in
-        const finalUser = userService.registerOrLogin({ ...accountData });
+      // Check if user already exists in the system (by email)
+      const allUsers = userService.getAllUsers ? userService.getAllUsers() : {};
+      const existingUser = allUsers[accountData.email.toLowerCase()];
+
+      if (existingUser) {
+        // Log them in immediately and bypass onboarding steps entirely!
+        const finalUser = userService.registerOrLogin({ ...accountData, role: existingUser.role });
         setUser(finalUser);
         
+        if (finalUser.role === 'builder') {
+          navigate('/hub');
+        } else {
+          const allProblems = userService.getAllProblems();
+          const existingProblem = allProblems.find(
+            p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)
+          );
+          if (existingProblem) {
+            navigate(`/workspace/${existingProblem.id}`);
+          } else {
+            navigate('/hub');
+          }
+        }
+        return;
+      }
+
+      // Brand new user registration: proceed as normal through wizard
+      const finalUser = userService.registerOrLogin({ ...accountData });
+      setUser(finalUser);
+      
+      if (isLoginMode) {
         const allProblems = userService.getAllProblems();
         const existingProblem = allProblems.find(
           p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)
@@ -51,10 +82,11 @@ const Onboarding = ({ setUser }) => {
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
+    // Immediately save role choice to session so navigating away works correctly
+    const finalUser = userService.registerOrLogin({ ...accountData, role: selectedRole });
+    setUser(finalUser);
+    
     if (selectedRole === 'owner') {
-      const finalUser = userService.registerOrLogin({ ...accountData, role: selectedRole });
-      setUser(finalUser);
-      
       const allProblems = userService.getAllProblems();
       const existingProblem = allProblems.find(
         p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)

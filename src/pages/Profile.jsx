@@ -1,24 +1,39 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Award, Shield, Star, Share2, Download, Briefcase, Zap, ExternalLink } from 'lucide-react';
+import { userService } from '../data/userService';
+import { Link } from 'react-router-dom';
 
 const Profile = () => {
+  const currentUser = userService.getCurrentUser();
+  const joinedProblems = userService.getJoinedProblems();
+
   const user = {
-    name: "Alex Rivera",
-    role: "Full Stack Engineer",
-    reputation: 1240,
+    name: currentUser?.name || "Guest Builder",
+    role: currentUser?.role === 'owner' ? "Visionary / Product Owner" : currentUser?.role === 'builder' ? "Full Stack Builder" : "Explorer",
+    reputation: (currentUser?.joined?.length || 0) * 10 + (currentUser?.reputation || 30),
     consistency: "98%",
-    skills: ["React", "Node.js", "UI/UX", "Python"],
-    badges: ["Top Collaborator", "Early Adopter", "MVP Shipper"],
-    projects: [
-      { id: 1, title: "Decentralized Carbon Marketplace", role: "Lead Dev", status: "MVP Shipped", impact: "High" },
-      { id: 2, title: "AI Mental Health Companion", role: "Contributor", status: "In Progress", impact: "Medium" }
-    ],
+    skills: currentUser?.skills && currentUser.skills.length > 0 ? currentUser.skills : ["React", "Node.js", "UI/UX", "Python"],
+    badges: currentUser?.role === 'owner' ? ["Top Visionary", "Community Lead"] : ["Top Collaborator", "Early Adopter", "MVP Shipper"],
+    projects: joinedProblems.map(p => ({
+      id: p.id,
+      title: p.title,
+      role: p.author === currentUser?.email ? "Owner / Author" : "Contributor",
+      status: p.status || "In Progress",
+      impact: p.impact || "High"
+    })),
     reviews: [
       { from: "Sam", rating: 5, comment: "Amazing technical skills and great communication." },
       { from: "Jo", rating: 5, comment: "Always delivers on time. High accountability." }
     ]
   };
+
+  const initials = user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="container" style={{ padding: '40px 0' }}>
@@ -33,7 +48,7 @@ const Profile = () => {
               fontSize: '3rem', fontWeight: 700, color: 'white',
               boxShadow: '0 0 20px var(--primary-glow)'
             }}>
-              AR
+              {initials}
             </div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{user.name}</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>{user.role}</p>

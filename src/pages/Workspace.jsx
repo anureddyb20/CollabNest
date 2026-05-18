@@ -27,8 +27,8 @@ const Workspace = () => {
   const selectedProblem = allProblems.find(p => String(p.id) === String(id)) || problems.find(p => String(p.id) === String(id)) || problems[0];
   
   const currentUser = userService.getCurrentUser();
-  // Bypass strict ownership for testing so the Applicants tab is always visible to any logged-in user
-  const isOwner = currentUser ? true : false;
+  // If the logged-in user has the 'owner' role (from 'I have an idea'), they are the admin of any workspace statement
+  const isOwner = currentUser && currentUser.role === 'owner';
 
   // 1. Milestones & Progress State
   const stages = ['Idea', 'Validation', 'Prototype', 'MVP', 'Launch'];
@@ -41,10 +41,24 @@ const Workspace = () => {
     { name: "Alex", role: "UI Designer", activity: "High", contributions: 12 },
   ]);
 
-  // Dynamic missing roles based on team
+  // Dynamic missing roles based on team (matching by role or skills)
   const requiredSkills = selectedProblem.skills || [];
-  const currentTeamRoles = team.map(t => t.role.toLowerCase());
-  const missingRoles = requiredSkills.filter(skill => !currentTeamRoles.includes(skill.toLowerCase()));
+  const missingRoles = requiredSkills.filter(skill => {
+    const skillLower = skill.toLowerCase();
+    const isCovered = team.some(member => {
+      const memberRoleLower = (member.role || '').toLowerCase();
+      // 1. Direct role match or partial containment (e.g., 'React Dev' matches 'React')
+      if (memberRoleLower.includes(skillLower) || skillLower.includes(memberRoleLower)) {
+        return true;
+      }
+      // 2. Skill match in their skills array if they have one
+      if (member.skills && Array.isArray(member.skills)) {
+        return member.skills.some(s => s.toLowerCase().includes(skillLower) || skillLower.includes(s.toLowerCase()));
+      }
+      return false;
+    });
+    return !isCovered;
+  });
 
   // 3. Applicants State (load real applicants or mock one)
   const [localApplicants, setLocalApplicants] = useState([]);
@@ -91,39 +105,57 @@ const Workspace = () => {
   const [selectedMemberProfile, setSelectedMemberProfile] = useState(null);
 
   useEffect(() => {
-    // Reset states when the selected problem changes
-    setStageIndex(2);
-    
-    // Load dynamic team from localStorage if exists, merged with default owner members
-    const defaultTeam = [
-      { name: "Anu", role: "Product Owner", activity: "High", contributions: 10 },
-      { name: "Alex", role: "UI Designer", activity: "High", contributions: 12 },
-    ];
-    const initialTeam = selectedProblem.acceptedMembers ? [...defaultTeam, ...selectedProblem.acceptedMembers] : defaultTeam;
-    setTeam(initialTeam);
-    
-    // Load dynamic rejected members
-    const initialRejected = selectedProblem.rejectedMembers || [];
-    setRejectedList(initialRejected);
+    const refreshData = () => {
+      // Reload problem from database to get latest accepted/rejected members
+      const latestProblems = userService.getAllProblems();
+      const latestProblem = latestProblems.find(p => String(p.id) === String(id)) || problems.find(p => String(p.id) === String(id)) || problems[0];
 
-    // Load contribution logs
-    const defaultLogs = [
-      { text: "Alex Rivera joined the team as UI Designer", date: "2 days ago" },
-      { text: "Anu created the project and posted requirements", date: "3 days ago" }
-    ];
-    const initialLogs = selectedProblem.contributionsLogs ? [...defaultLogs, ...selectedProblem.contributionsLogs] : defaultLogs;
-    setContributionLogs(initialLogs);
-    
-    // Load and filter applicants (exclude already accepted/rejected emails)
-    const dbApplicants = userService.getApplicantsForProblem(selectedProblem.id);
-    const acceptedEmails = (selectedProblem.acceptedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
-    const rejectedEmails = (selectedProblem.rejectedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
-    
-    const filteredApplicants = dbApplicants.filter(
-      app => app && app.email && !acceptedEmails.includes(app.email.toLowerCase()) && !rejectedEmails.includes(app.email.toLowerCase())
-    );
-    
-    setLocalApplicants(filteredApplicants);
+      // Load applicants
+      const dbApplicants = userService.getApplicantsForProblem(latestProblem.id);
+      const acceptedEmails = (latestProblem.acceptedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
+      const rejectedEmails = (latestProblem.rejectedMembers || []).map(m => m.email ? m.email.toLowerCase() : '');
+      
+      const filteredApplicants = dbApplicants.filter(
+        app => app && app.email && !acceptedEmails.includes(app.email.toLowerCase()) && !rejectedEmails.includes(app.email.toLowerCase())
+      );
+      
+      setLocalApplicants(filteredApplicants);
+      
+      const ownerName = latestProblem.author 
+        ? userService.getUserNameByEmail(latestProblem.author) 
+        : (currentUser?.role === 'owner' ? (currentUser?.name || "Anu") : "Anu");
+
+      // Sync accepted and rejected members list dynamically
+      const defaultTeam = [
+        { name: ownerName, role: "Product Owner", activity: "High", contributions: 10 },
+        { name: "Alex", role: "UI Designer", activity: "High", contributions: 12 },
+      ];
+      const initialTeam = latestProblem.acceptedMembers ? [...defaultTeam, ...latestProblem.acceptedMembers] : defaultTeam;
+      setTeam(initialTeam);
+
+      const initialRejected = latestProblem.rejectedMembers || [];
+      setRejectedList(initialRejected);
+
+      const defaultLogs = [
+        { text: "Alex Rivera joined the team as UI Designer", date: "2 days ago" },
+        { text: `${ownerName} created the project and posted requirements`, date: "3 days ago" }
+      ];
+      const initialLogs = latestProblem.contributionsLogs ? [...defaultLogs, ...latestProblem.contributionsLogs] : defaultLogs;
+      setContributionLogs(initialLogs);
+    };
+
+    // Run immediately
+    refreshData();
+
+    // Sync on window focus or storage updates to handle multi-tab testing!
+    window.addEventListener('focus', refreshData);
+    window.addEventListener('storage', refreshData);
+    const interval = setInterval(refreshData, 2000);
+
+    // Initial setups for tasks, chat, and docs
+    const ownerName = selectedProblem.author 
+      ? userService.getUserNameByEmail(selectedProblem.author) 
+      : (currentUser?.role === 'owner' ? (currentUser?.name || "Anu") : "Anu");
 
     setTasks({
       todo: ["Implement " + ((selectedProblem.skills && selectedProblem.skills[0]) || "Frontend"), "Research " + selectedProblem.domain + " market"],
@@ -132,16 +164,22 @@ const Workspace = () => {
     });
 
     setChatMessages([
-      { sender: "Anu", text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
+      { sender: ownerName, text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
       { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
     ]);
 
     setDocsList([
-      { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: "Anu", date: "3 days ago" },
+      { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: "3 days ago" },
       { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
-      { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: "Anu", date: "4 days ago" }
+      { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: ownerName, date: "4 days ago" }
     ]);
-  }, [id, selectedProblem.id, selectedProblem.title, selectedProblem.acceptedMembers, selectedProblem.rejectedMembers, selectedProblem.contributionsLogs, selectedProblem.skills, selectedProblem.domain]);
+
+    return () => {
+      window.removeEventListener('focus', refreshData);
+      window.removeEventListener('storage', refreshData);
+      clearInterval(interval);
+    };
+  }, [id, selectedProblem.id, selectedProblem.title, selectedProblem.skills, selectedProblem.domain, currentUser]);
 
   const handleMemberClick = (member) => {
     const lowerName = member.name.toLowerCase();
@@ -215,7 +253,8 @@ const Workspace = () => {
       email: app.email,
       role: roleForApp,
       activity: "High",
-      contributions: 0
+      contributions: 0,
+      skills: app.skills || []
     };
     
     const updatedTeamList = [...team, newMember];
@@ -300,7 +339,35 @@ const Workspace = () => {
 
   const handleInvite = (candidate) => {
     setInvitedCandidates([...invitedCandidates, candidate.name]);
-    alert(`Invitation sent to ${candidate.name} based on skill compatibility!`);
+    
+    // Create new team member object dynamically
+    const newMember = {
+      name: candidate.name,
+      role: candidate.role,
+      activity: "High",
+      contributions: 0,
+      skills: [candidate.skill]
+    };
+    
+    const updatedTeam = [...team, newMember];
+    setTeam(updatedTeam);
+    
+    // Save to the problem's acceptedMembers so it persists on reload!
+    const acceptedOnly = selectedProblem.acceptedMembers ? [...selectedProblem.acceptedMembers, newMember] : [newMember];
+    
+    const newLog = {
+      text: `${candidate.name} joined the team as ${candidate.role} via direct recruitment`,
+      date: "Just now"
+    };
+    const updatedLogs = selectedProblem.contributionsLogs ? [...selectedProblem.contributionsLogs, newLog] : [newLog];
+    setContributionLogs([...contributionLogs, newLog]);
+    
+    userService.updateProblem(selectedProblem.id, {
+      acceptedMembers: acceptedOnly,
+      contributionsLogs: updatedLogs
+    });
+
+    alert(`${candidate.name} has accepted your invitation and joined the team!`);
   };
 
   return (
@@ -405,13 +472,15 @@ const Workspace = () => {
                   <span style={{ fontSize: '0.85rem', color: 'var(--success)' }}>Team Complete!</span>
                 )}
               </div>
-              <button 
-                onClick={() => setShowRecruitModal(true)}
-                className="btn-outline" 
-                style={{ width: '100%', marginTop: '16px', fontSize: '0.8rem', padding: '8px' }}
-              >
-                <Plus size={14} /> Recruit Members
-              </button>
+              {isOwner && (
+                <button 
+                  onClick={() => setShowRecruitModal(true)}
+                  className="btn-outline" 
+                  style={{ width: '100%', marginTop: '16px', fontSize: '0.8rem', padding: '8px' }}
+                >
+                  <Plus size={14} /> Recruit Members
+                </button>
+              )}
             </div>
           </div>
         </aside>
@@ -517,24 +586,27 @@ const Workspace = () => {
           ) : activeTab === 'chat' ? (
             <div className="glass-panel" style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {chatMessages.map((msg, i) => (
-                  <div key={i} style={{ alignSelf: msg.sender === 'Anu' ? 'flex-start' : 'flex-end', maxWidth: '70%' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', textAlign: msg.sender === 'Anu' ? 'left' : 'right' }}>
-                      <span 
-                        onClick={() => handleMemberClick({ name: msg.sender })} 
-                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                      >
-                        {msg.sender}
-                      </span> • {msg.time}
+                {chatMessages.map((msg, i) => {
+                  const isMe = msg.sender === (currentUser?.name || "You") || msg.sender === "You";
+                  return (
+                    <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                        <span 
+                          onClick={() => handleMemberClick({ name: msg.sender })} 
+                          style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          {msg.sender}
+                        </span> • {msg.time}
+                      </div>
+                      <div style={{ 
+                        background: isMe ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', fontSize: '0.9rem', color: 'white'
+                      }}>
+                        {msg.text}
+                      </div>
                     </div>
-                    <div style={{ 
-                      background: msg.sender === 'Anu' ? 'rgba(255,255,255,0.05)' : 'var(--primary)',
-                      border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', fontSize: '0.9rem', color: 'white'
-                    }}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <form onSubmit={handleSendMessage} style={{ padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px' }}>
                 <input 

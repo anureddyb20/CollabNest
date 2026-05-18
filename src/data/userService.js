@@ -45,6 +45,7 @@ const areEmailsSimilar = (e1, e2) => {
 
 export const userService = {
   areEmailsSimilar,
+  getAllUsers,
 
   // Auth
   registerOrLogin: (userData) => {
@@ -56,10 +57,19 @@ export const userService = {
       // If they have posted problems (with typo-tolerant check), set/upgrade role to 'owner'
       const storedProblems = getGlobalProblems();
       const hasPosted = storedProblems.some(p => p.author && areEmailsSimilar(p.author, email));
+      
+      // Update any incoming profile/onboarding fields dynamically
+      if (userData.name) users[email].name = userData.name;
+      if (userData.role) users[email].role = userData.role;
+      if (userData.skills) users[email].skills = userData.skills;
+      if (userData.expertise) users[email].expertise = userData.expertise;
+      if (userData.experience) users[email].experience = userData.experience;
+      if (userData.commitment) users[email].commitment = userData.commitment;
+      
       if (hasPosted) {
         users[email].role = 'owner';
-        saveUsers(users);
       }
+      saveUsers(users);
       saveSession({ email });
       return users[email];
     } else {
@@ -90,6 +100,22 @@ export const userService = {
     if (!session) return null;
     const users = getAllUsers();
     return users[session.email] || null;
+  },
+
+  getUserNameByEmail: (email) => {
+    if (!email) return "Anu";
+    const users = getAllUsers();
+    const cleanEmail = email.toLowerCase();
+    if (users[cleanEmail] && users[cleanEmail].name) {
+      return users[cleanEmail].name;
+    }
+    // Fallback: search for similar emails or capitalize the name part of the email
+    const matchedKey = Object.keys(users).find(k => areEmailsSimilar(k, cleanEmail));
+    if (matchedKey && users[matchedKey].name) {
+      return users[matchedKey].name;
+    }
+    const namePart = email.split('@')[0];
+    return namePart.charAt(0).toUpperCase() + namePart.slice(1);
   },
 
   logout: () => {

@@ -26,12 +26,21 @@ export default function BuilderHub({ user }) {
     skillInput: ''
   });
   const [profileSaved, setProfileSaved] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     setProblems(userService.getAllProblems());
-    const cur = userService.getCurrentUser();
+    const cur = userService.getCurrentUser() || user;
+    setCurrentUser(cur);
     if (cur?.submissions) setApplied(cur.submissions.map(String));
-  }, []);
+    if (cur) {
+      setProfile(p => ({
+        ...p,
+        skills: cur.skills || [],
+        experience: cur.experience || 'Entry Level'
+      }));
+    }
+  }, [user]);
 
   const filtered = problems.filter(p => {
     const matchDomain = domainFilter === 'All' || p.domain === domainFilter;
@@ -142,6 +151,18 @@ export default function BuilderHub({ user }) {
           I Want to Build
         </h1>
         <p style={{ color: 'var(--text-secondary)', marginTop: 8, fontSize: 15 }}>Discover problems, join teams, and build real-world projects that matter.</p>
+
+        {/* Logged-in user pill */}
+        {currentUser && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 50, padding: '6px 16px 6px 6px', marginTop: 14 }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+              {(currentUser.name || 'U')[0].toUpperCase()}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{currentUser.name}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{currentUser.email}</span>
+            <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, marginLeft: 4 }}>{(currentUser.joined?.length || 0) * 10 + (currentUser.reputation || 0)} XP</span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -191,8 +212,27 @@ export default function BuilderHub({ user }) {
       {/* PROFILE TAB */}
       {tab === 'profile' && (
         <div style={{ maxWidth: 700 }}>
+          {/* Account Details Card */}
+          {currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(16,185,129,0.08))', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, color: 'white', flexShrink: 0, boxShadow: '0 0 16px rgba(139,92,246,0.4)' }}>
+                {(currentUser.name || 'U')[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 18, color: '#e2e8f0', marginBottom: 2 }}>{currentUser.name || 'User'}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{currentUser.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Role: <span style={{ color: 'var(--secondary)', fontWeight: 600 }}>{currentUser.role === 'owner' ? 'Visionary / Owner' : currentUser.role === 'builder' ? 'Builder' : 'Explorer'}</span></div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)' }}>{(currentUser.joined?.length || 0) * 10 + (currentUser.reputation || 0)}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>XP EARNED</div>
+                <div style={{ fontSize: 11, color: 'var(--secondary)', marginTop: 4 }}>{currentUser.joined?.length || 0} Projects Joined</div>
+              </div>
+            </div>
+          )}
+
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 32 }}>
-            <h2 style={{ margin: '0 0 24px', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Your Builder Profile</h2>
+            <h2 style={{ margin: '0 0 24px', fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Builder Skill Preferences</h2>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>Your Skills</label>

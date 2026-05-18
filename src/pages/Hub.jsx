@@ -41,7 +41,7 @@ const Hub = ({ user: initialUser }) => {
     }
 
     setDisplayProblems([...list]); // Force new array reference
-  }, [activeSidebar, activeFilter, refreshKey]);
+  }, [activeSidebar, activeFilter, refreshKey, initialUser]);
 
   const handleJoin = (id) => {
     const session = userService.getCurrentUser();
