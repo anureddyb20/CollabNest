@@ -23,17 +23,32 @@ const Onboarding = ({ setUser }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Clear session when entering onboarding to start fresh!
-    userService.logout();
-    setUser(null);
-  }, []);
+    // If there is already a logged-in user, redirect them to their dashboard instead of logging out
+    const session = userService.getCurrentUser();
+    if (session) {
+      if (session.role === 'builder') {
+        navigate('/hub');
+      } else {
+        const allProblems = userService.getAllProblems();
+        const existingProblem = allProblems.find(
+          p => p.author && userService.areEmailsSimilar(p.author, session.email)
+        );
+        if (existingProblem) {
+          navigate(`/workspace/${existingProblem.id}`);
+        } else {
+          navigate('/hub');
+        }
+      }
+    }
+  }, [navigate]);
 
   const handleAccountSubmit = (e) => {
     e.preventDefault();
-    if (accountData.name && accountData.email) {
+    if (accountData.email && (isLoginMode || accountData.name)) {
       // Check if user already exists in the system (by email)
       const allUsers = userService.getAllUsers ? userService.getAllUsers() : {};
-      const existingUser = allUsers[accountData.email.toLowerCase()];
+      const cleanEmail = accountData.email.toLowerCase().trim();
+      const existingUser = allUsers[cleanEmail];
 
       if (existingUser) {
         // Log them in immediately and bypass onboarding steps entirely!
@@ -140,20 +155,22 @@ const Onboarding = ({ setUser }) => {
             </div>
             
             <form onSubmit={handleAccountSubmit}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Full Name</label>
-                <input 
-                  type="text" 
-                  required
-                  value={accountData.name}
-                  onChange={(e) => setAccountData({...accountData, name: e.target.value})}
-                  placeholder="John Doe"
-                  style={{ 
-                    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                    borderRadius: '12px', padding: '12px', color: 'white', fontSize: '1rem'
-                  }}
-                />
-              </div>
+              {!isLoginMode && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Full Name</label>
+                  <input 
+                    type="text" 
+                    required={!isLoginMode}
+                    value={accountData.name}
+                    onChange={(e) => setAccountData({...accountData, name: e.target.value})}
+                    placeholder="John Doe"
+                    style={{ 
+                      width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                      borderRadius: '12px', padding: '12px', color: 'white', fontSize: '1rem'
+                    }}
+                  />
+                </div>
+              )}
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Email Address</label>
                 <input 

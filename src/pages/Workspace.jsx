@@ -30,6 +30,11 @@ const Workspace = () => {
   // If the logged-in user has the 'owner' role (from 'I have an idea'), they are the admin of any workspace statement
   const isOwner = currentUser && currentUser.role === 'owner';
 
+  const ownerName = selectedProblem.author 
+    ? userService.getUserNameByEmail(selectedProblem.author) 
+    : (currentUser?.role === 'owner' ? (currentUser?.name || "Anu") : "Anu");
+
+
   // 1. Milestones & Progress State
   const stages = ['Idea', 'Validation', 'Prototype', 'MVP', 'Launch'];
   const [stageIndex, setStageIndex] = useState(2); // Prototype by default
@@ -163,10 +168,17 @@ const Workspace = () => {
       done: ["Initial Ideation"]
     });
 
-    setChatMessages([
-      { sender: ownerName, text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
-      { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
-    ]);
+    const storedChats = localStorage.getItem(`cocreatex_chats_${id}`);
+    if (storedChats) {
+      setChatMessages(JSON.parse(storedChats));
+    } else {
+      const defaultChats = [
+        { sender: ownerName, text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
+        { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
+      ];
+      setChatMessages(defaultChats);
+      localStorage.setItem(`cocreatex_chats_${id}`, JSON.stringify(defaultChats));
+    }
 
     setDocsList([
       { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: "3 days ago" },
@@ -179,7 +191,7 @@ const Workspace = () => {
       window.removeEventListener('storage', refreshData);
       clearInterval(interval);
     };
-  }, [id, selectedProblem.id, selectedProblem.title, selectedProblem.skills, selectedProblem.domain, currentUser]);
+  }, [id, selectedProblem.id, selectedProblem.title, JSON.stringify(selectedProblem.skills), selectedProblem.domain, currentUser?.email]);
 
   const handleMemberClick = (member) => {
     const lowerName = member.name.toLowerCase();
@@ -333,7 +345,9 @@ const Workspace = () => {
       text: chatInput.trim(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    setChatMessages([...chatMessages, newMessage]);
+    const updatedChats = [...chatMessages, newMessage];
+    setChatMessages(updatedChats);
+    localStorage.setItem(`cocreatex_chats_${id}`, JSON.stringify(updatedChats));
     setChatInput('');
   };
 
@@ -599,7 +613,7 @@ const Workspace = () => {
                         </span> • {msg.time}
                       </div>
                       <div style={{ 
-                        background: isMe ? 'var(--primary)' : 'rgba(96, 114, 92, 0.05)',
+                        background: isMe ? 'var(--primary)' : 'rgba(108, 99, 255, 0.05)',
                         border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', fontSize: '0.9rem', 
                         color: isMe ? 'white' : 'var(--text-main)'
                       }}>
@@ -714,9 +728,9 @@ const Workspace = () => {
                   {/* Accepted sub-list */}
                   <div style={{ marginBottom: '24px' }}>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '12px' }}>Accepted Members</div>
-                    {team.filter(m => m.name !== 'Anu' && m.name !== 'Alex').length > 0 ? (
+                    {team.filter(m => m.name !== ownerName && !(m.name === 'Alex' && m.role === 'UI Designer')).length > 0 ? (
                       <div style={{ display: 'grid', gap: '10px' }}>
-                        {team.filter(m => m.name !== 'Anu' && m.name !== 'Alex').map(m => (
+                        {team.filter(m => m.name !== ownerName && !(m.name === 'Alex' && m.role === 'UI Designer')).map(m => (
                           <div key={m.name} className="glass-card" style={{ padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                               <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</div>

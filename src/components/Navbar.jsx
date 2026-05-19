@@ -6,6 +6,7 @@ import { userService } from '../data/userService';
 
 const Navbar = ({ user }) => {
   const location = useLocation();
+  const currentUser = user || userService.getCurrentUser();
 
   const handleLogout = () => {
     userService.logout();
@@ -37,7 +38,7 @@ const Navbar = ({ user }) => {
             borderRadius: '12px',
             display: 'flex'
           }}>
-            <Rocket size={24} color="#F7F5EC" />
+            <Rocket size={24} color="#FFFFFF" />
           </div>
           <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)' }}>
             CoCreate<span style={{ color: 'var(--primary)' }}>X</span>
@@ -76,15 +77,20 @@ const Navbar = ({ user }) => {
           })}
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '1rem' }}>
-            {location.pathname !== '/' ? (
-              <button 
-                onClick={handleLogout}
-                className="btn-outline" 
-                style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-              >
-                <LogOut size={16} />
-                Log Out
-              </button>
+            {currentUser ? (
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Hi, {currentUser.name}
+                </span>
+                <button 
+                  onClick={handleLogout}
+                  className="btn-outline" 
+                  style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <LogOut size={16} />
+                  Log Out
+                </button>
+              </div>
             ) : (
               <Link to="/onboarding" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
                 Get Started

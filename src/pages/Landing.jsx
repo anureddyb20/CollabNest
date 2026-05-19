@@ -91,7 +91,7 @@ const Landing = () => {
               >
                 <div style={{ 
                   width: '48px', height: '48px', 
-                  borderRadius: '12px', background: 'rgba(96, 114, 92, 0.1)',
+                  borderRadius: '12px', background: 'rgba(108, 99, 255, 0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   marginBottom: '20px', color: 'var(--primary)'
                 }}>

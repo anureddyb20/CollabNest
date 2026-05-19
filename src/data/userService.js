@@ -50,7 +50,7 @@ export const userService = {
   // Auth
   registerOrLogin: (userData) => {
     const users = getAllUsers();
-    const email = userData.email.toLowerCase();
+    const email = userData.email.toLowerCase().trim();
     
     if (users[email]) {
       // User exists, save their email in session
@@ -59,7 +59,7 @@ export const userService = {
       const hasPosted = storedProblems.some(p => p.author && areEmailsSimilar(p.author, email));
       
       // Update any incoming profile/onboarding fields dynamically
-      if (userData.name) users[email].name = userData.name;
+      if (userData.name) users[email].name = userData.name.trim();
       if (userData.role) users[email].role = userData.role;
       if (userData.skills) users[email].skills = userData.skills;
       if (userData.expertise) users[email].expertise = userData.expertise;
@@ -76,6 +76,7 @@ export const userService = {
       // New user - starts fresh so they can test joining/submitting
       const newUser = {
         ...userData,
+        name: userData.name ? userData.name.trim() : '',
         email,
         joined: [], 
         saved: [], 
@@ -99,13 +100,28 @@ export const userService = {
     const session = getCurrentSession();
     if (!session) return null;
     const users = getAllUsers();
-    return users[session.email] || null;
+    return session.email ? users[session.email.toLowerCase().trim()] || null : null;
+  },
+
+  updateProfile: (email, profileData) => {
+    if (!email) return null;
+    const users = getAllUsers();
+    const cleanEmail = email.toLowerCase().trim();
+    if (users[cleanEmail]) {
+      users[cleanEmail] = {
+        ...users[cleanEmail],
+        ...profileData
+      };
+      saveUsers(users);
+      return users[cleanEmail];
+    }
+    return null;
   },
 
   getUserNameByEmail: (email) => {
     if (!email) return "Anu";
     const users = getAllUsers();
-    const cleanEmail = email.toLowerCase();
+    const cleanEmail = email.toLowerCase().trim();
     if (users[cleanEmail] && users[cleanEmail].name) {
       return users[cleanEmail].name;
     }
@@ -278,8 +294,15 @@ export const userService = {
     const allProblems = getGlobalProblems();
     const targetProblem = allProblems.find(p => String(p.id) === String(problemId));
     const targetTitle = targetProblem ? targetProblem.title.toLowerCase().trim() : '';
+    const authorEmail = targetProblem && targetProblem.author ? targetProblem.author.toLowerCase().trim() : '';
 
     Object.keys(users).forEach(email => {
+      const cleanEmail = email.toLowerCase().trim();
+      // If the user is the author of this problem, they should NOT be in the applicants list
+      if (authorEmail && (cleanEmail === authorEmail || areEmailsSimilar(cleanEmail, authorEmail))) {
+        return;
+      }
+
       if (users[email].submissions) {
         const hasMatch = users[email].submissions.some(id => {
           if (String(id) === String(problemId)) return true;
