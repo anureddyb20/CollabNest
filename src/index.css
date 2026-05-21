@@ -293,3 +293,9 @@ h1, h2, h3, h4 {
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
+
+.doc-hover-card:hover {
+  border-color: var(--primary) !important;
+  background: rgba(108, 99, 255, 0.04) !important;
+  transform: translateX(4px);
+}

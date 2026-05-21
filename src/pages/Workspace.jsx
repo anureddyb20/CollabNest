@@ -67,14 +67,12 @@ const Workspace = () => {
 
   // 3. Applicants State (load real applicants or mock one)
   const [localApplicants, setLocalApplicants] = useState([]);
-  
-
 
   // 4. Tasks Board State
   const [tasks, setTasks] = useState({
-    todo: ["Implement " + (selectedProblem.skills[0] || "Frontend"), "Research " + selectedProblem.domain + " market"],
-    doing: ["Architecture Setup"],
-    done: ["Initial Ideation"]
+    todo: [],
+    doing: [],
+    done: []
   });
   const [activeInputColumn, setActiveInputColumn] = useState(null);
   const [inlineTaskText, setInlineTaskText] = useState('');
@@ -91,14 +89,11 @@ const Workspace = () => {
   const [invitedCandidates, setInvitedCandidates] = useState([]);
 
   // 7. Docs State
-  const [docsList, setDocsList] = useState([
-    { name: "System_Architecture.pdf", type: "PDF", size: "2.4 MB", uploader: "Anu", date: "3 days ago" },
-    { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
-    { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: "Anu", date: "4 days ago" }
-  ]);
+  const [docsList, setDocsList] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [newDocName, setNewDocName] = useState('');
   const [newDocType, setNewDocType] = useState('PDF');
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Persistence & Reject Modal states
   const [rejectedList, setRejectedList] = useState([]);
@@ -108,6 +103,11 @@ const Workspace = () => {
 
   // Member Profile overlay state
   const [selectedMemberProfile, setSelectedMemberProfile] = useState(null);
+
+  // New states for interactive graph, user contributions, and task assignees
+  const [hoveredGraphPoint, setHoveredGraphPoint] = useState(null);
+  const [expandedMemberTasks, setExpandedMemberTasks] = useState(null);
+  const [taskAssignee, setTaskAssignee] = useState('');
 
   useEffect(() => {
     const refreshData = () => {
@@ -147,6 +147,50 @@ const Workspace = () => {
       ];
       const initialLogs = latestProblem.contributionsLogs ? [...defaultLogs, ...latestProblem.contributionsLogs] : defaultLogs;
       setContributionLogs(initialLogs);
+
+      // Load stage index
+      if (latestProblem.stageIndex !== undefined) {
+        setStageIndex(latestProblem.stageIndex);
+      } else {
+        setStageIndex(2); // Prototype by default
+      }
+
+      // Load tasks
+      if (latestProblem.tasks && latestProblem.tasks.todo && latestProblem.tasks.doing && latestProblem.tasks.done) {
+        setTasks(latestProblem.tasks);
+      } else {
+        const defaultTasks = {
+          todo: ["Implement " + ((latestProblem.skills && latestProblem.skills[0]) || "Frontend"), "Research " + latestProblem.domain + " market"],
+          doing: ["Architecture Setup"],
+          done: ["Initial Ideation"]
+        };
+        setTasks(defaultTasks);
+      }
+
+      // Load docs
+      if (latestProblem.docs) {
+        setDocsList(latestProblem.docs);
+      } else {
+        const defaultDocs = [
+          { name: `System_Architecture_${latestProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: "3 days ago" },
+          { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
+          { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: ownerName, date: "4 days ago" }
+        ];
+        setDocsList(defaultDocs);
+      }
+
+      // Load chats
+      const storedChats = localStorage.getItem(`cocreatex_chats_${latestProblem.id}`);
+      if (storedChats) {
+        setChatMessages(JSON.parse(storedChats));
+      } else {
+        const defaultChats = [
+          { sender: ownerName, text: `Hey team! Let's get started on the prototype for ${latestProblem.title}.`, time: "10:30 AM" },
+          { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
+        ];
+        setChatMessages(defaultChats);
+        localStorage.setItem(`cocreatex_chats_${latestProblem.id}`, JSON.stringify(defaultChats));
+      }
     };
 
     // Run immediately
@@ -156,35 +200,6 @@ const Workspace = () => {
     window.addEventListener('focus', refreshData);
     window.addEventListener('storage', refreshData);
     const interval = setInterval(refreshData, 2000);
-
-    // Initial setups for tasks, chat, and docs
-    const ownerName = selectedProblem.author 
-      ? userService.getUserNameByEmail(selectedProblem.author) 
-      : (currentUser?.role === 'owner' ? (currentUser?.name || "Anu") : "Anu");
-
-    setTasks({
-      todo: ["Implement " + ((selectedProblem.skills && selectedProblem.skills[0]) || "Frontend"), "Research " + selectedProblem.domain + " market"],
-      doing: ["Architecture Setup"],
-      done: ["Initial Ideation"]
-    });
-
-    const storedChats = localStorage.getItem(`cocreatex_chats_${id}`);
-    if (storedChats) {
-      setChatMessages(JSON.parse(storedChats));
-    } else {
-      const defaultChats = [
-        { sender: ownerName, text: `Hey team! Let's get started on the prototype for ${selectedProblem.title}.`, time: "10:30 AM" },
-        { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
-      ];
-      setChatMessages(defaultChats);
-      localStorage.setItem(`cocreatex_chats_${id}`, JSON.stringify(defaultChats));
-    }
-
-    setDocsList([
-      { name: `System_Architecture_${selectedProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: "3 days ago" },
-      { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
-      { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: ownerName, date: "4 days ago" }
-    ]);
 
     return () => {
       window.removeEventListener('focus', refreshData);
@@ -327,14 +342,224 @@ const Workspace = () => {
     setRejectingApplicant(null);
   };
 
+  const formatBytes = (bytes, decimals = 1) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  };
+
+  const getCompletedTasksForMember = (memberName) => {
+    const mockTasks = {
+      "Anu": [
+        "Setup workspace repository",
+        "Draft product requirement document",
+        "Conduct user interviews",
+        "Create landing page skeleton",
+        "Configure deployment pipelines",
+        "Configure AWS server",
+        "Integrate user authentication",
+        "Design database schema",
+        "Review security audit report",
+        "Define milestone stages"
+      ],
+      "Alex": [
+        "Create high-fidelity Figma mockups",
+        "Define typography and color palette",
+        "Create interactive prototypes",
+        "Refine mobile responsive layouts",
+        "Design brand logos and assets",
+        "Create style guide and UI components",
+        "Conduct UX usability testing",
+        "Draft onboarding user flow",
+        "Design workspace dashboard interface",
+        "Implement dark mode theme CSS",
+        "Optimize visual asset sizes",
+        "Conduct design alignment review"
+      ]
+    };
+
+    const nameKey = Object.keys(mockTasks).find(k => k.toLowerCase() === memberName.toLowerCase());
+    const defaults = nameKey ? mockTasks[nameKey] : [];
+
+    // Gather dynamic completed tasks assigned to this member from the "done" column
+    const dynamicDone = (tasks.done || [])
+      .filter(t => {
+        const assignee = typeof t === 'string' ? 'Anu' : (t.assignee || 'Anu');
+        return assignee.toLowerCase() === memberName.toLowerCase();
+      })
+      .map(t => typeof t === 'string' ? t : t.text);
+
+    return [...defaults, ...dynamicDone];
+  };
+
+  const getTasksForGraph = () => {
+    // Start with default completed tasks distributed among different team members
+    const pts = [
+      { id: "p1", task: "Project Proposal", assignee: "Anu", date: "4 days ago", val: 10 },
+      { id: "p2", task: "System Architecture", assignee: "Shravani", date: "3 days ago", val: 25 },
+      { id: "p3", task: "UI Wireframes v2", assignee: "Alex", date: "2 days ago", val: 50 },
+      { id: "p4", task: "Database Design", assignee: "Bhavana", date: "2 days ago", val: 65 },
+      { id: "p5", task: "Initial Ideation", assignee: "Preksha", date: "1 day ago", val: 80 }
+    ];
+
+    // Add tasks in the done column
+    let count = 5;
+    (tasks.done || []).forEach(t => {
+      const taskText = typeof t === 'string' ? t : t.text;
+      const taskAssigneeName = typeof t === 'string' ? 'Anu' : (t.assignee || 'Anu');
+      count++;
+      pts.push({
+        id: typeof t === 'string' ? `done-${count}` : (t.id || `done-${count}`),
+        task: taskText,
+        assignee: taskAssigneeName,
+        date: "Just now",
+        val: Math.min(80 + (count - 5) * 4, 100)
+      });
+    });
+
+    return pts;
+  };
+
   const handleAddTask = (column) => {
     if (!inlineTaskText.trim()) return;
-    setTasks({
+    const assigneeName = taskAssignee || (team[0] ? team[0].name : 'Anu');
+    const newTask = {
+      id: Date.now().toString(),
+      text: inlineTaskText.trim(),
+      assignee: assigneeName,
+      date: 'Just now'
+    };
+    const updatedTasks = {
       ...tasks,
-      [column]: [...tasks[column], inlineTaskText.trim()]
-    });
+      [column]: [...(tasks[column] || []), newTask]
+    };
+    setTasks(updatedTasks);
+    userService.updateProblem(selectedProblem.id, { tasks: updatedTasks });
     setInlineTaskText('');
+    setTaskAssignee('');
     setActiveInputColumn(null);
+  };
+
+  const handleMoveTask = (taskTextOrObj, fromStatus, toStatus) => {
+    const taskId = typeof taskTextOrObj === 'string' ? taskTextOrObj : taskTextOrObj.id;
+    
+    const taskToMove = (tasks[fromStatus] || []).find(t => {
+      const id = typeof t === 'string' ? t : t.id;
+      return id === taskId;
+    });
+    if (!taskToMove) return;
+
+    const fromTasks = (tasks[fromStatus] || []).filter(t => {
+      const id = typeof t === 'string' ? t : t.id;
+      return id !== taskId;
+    });
+    const toTasks = [...(tasks[toStatus] || []), taskToMove];
+
+    const updatedTasks = {
+      ...tasks,
+      [fromStatus]: fromTasks,
+      [toStatus]: toTasks
+    };
+    setTasks(updatedTasks);
+    userService.updateProblem(selectedProblem.id, { tasks: updatedTasks });
+  };
+
+  const handleDeleteTask = (taskTextOrObj, fromStatus) => {
+    const taskId = typeof taskTextOrObj === 'string' ? taskTextOrObj : taskTextOrObj.id;
+    const updatedTasks = {
+      ...tasks,
+      [fromStatus]: (tasks[fromStatus] || []).filter(t => {
+        const id = typeof t === 'string' ? t : t.id;
+        return id !== taskId;
+      })
+    };
+    setTasks(updatedTasks);
+    userService.updateProblem(selectedProblem.id, { tasks: updatedTasks });
+  };
+
+  const handleDragStart = (e, taskTextOrObj, fromStatus) => {
+    const taskId = typeof taskTextOrObj === 'string' ? taskTextOrObj : taskTextOrObj.id;
+    e.dataTransfer.setData("text/plain", taskId);
+    e.dataTransfer.setData("fromStatus", fromStatus);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, toStatus) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData("text/plain");
+    const fromStatus = e.dataTransfer.getData("fromStatus");
+    if (!taskId || !fromStatus || fromStatus === toStatus) return;
+
+    const taskToMove = (tasks[fromStatus] || []).find(t => {
+      const id = typeof t === 'string' ? t : t.id;
+      return id === taskId;
+    });
+    if (!taskToMove) return;
+
+    handleMoveTask(taskToMove, fromStatus, toStatus);
+  };
+
+  const handleDownload = (doc) => {
+    if (doc.content) {
+      // It's a real file upload saved as a Data URL
+      const a = document.createElement('a');
+      a.href = doc.content;
+      a.download = doc.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Create a mock download
+      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCoCreateX BuilderHub - Collaboration Space.`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleOpenFile = (doc) => {
+    if (doc.content) {
+      try {
+        const parts = doc.content.split(';base64,');
+        const contentType = parts[0].split(':')[1];
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
+        const blob = new Blob([uInt8Array], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (err) {
+        window.open(doc.content, '_blank');
+      }
+    } else {
+      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCoCreateX BuilderHub - Collaboration Space.`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+  };
+
+  const handleDeleteFile = (docName) => {
+    if (window.confirm(`Are you sure you want to delete ${docName}?`)) {
+      const updatedDocs = docsList.filter(d => d.name !== docName);
+      setDocsList(updatedDocs);
+      userService.updateProblem(selectedProblem.id, { docs: updatedDocs });
+    }
   };
 
   const handleSendMessage = (e) => {
@@ -501,7 +726,7 @@ const Workspace = () => {
 
         {/* Main Content Area: Kanban / Communication */}
         <div>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
             <button 
               onClick={() => setActiveTab('board')}
               className={activeTab === 'board' ? 'btn-primary' : 'btn-outline'} 
@@ -539,28 +764,63 @@ const Workspace = () => {
             >
               <Files size={16} /> Docs & Files
             </button>
+            <button 
+              onClick={() => setActiveTab('graph')}
+              className={activeTab === 'graph' ? 'btn-primary' : 'btn-outline'} 
+              style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+            >
+              <Activity size={16} /> Progress Graph
+            </button>
           </div>
 
           {activeTab === 'board' ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
               {['todo', 'doing', 'done'].map(status => (
-                <div key={status} className="glass-card" style={{ padding: '16px', background: 'rgba(255,255,255,0.02)' }}>
+                <div 
+                  key={status} 
+                  className="glass-card" 
+                  style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', minHeight: '400px' }}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, status)}
+                >
                   <h4 style={{ textTransform: 'capitalize', marginBottom: '16px', color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
                     {status}
-                    <span style={{ background: 'var(--border)', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem' }}>{tasks[status].length}</span>
+                    <span style={{ background: 'var(--border)', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem' }}>{(tasks[status] || []).length}</span>
                   </h4>
-                  {tasks[status].map(task => (
-                    <div key={task} className="glass-card" style={{ padding: '12px', marginBottom: '12px', fontSize: '0.85rem', cursor: 'grab' }}>
-                      {task}
-                      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', WebkitMaskImage: 'linear-gradient(to right, black 50%, transparent)', maskImage: 'linear-gradient(to right, black 50%, transparent)' }}>
-                          {/* Avatars */}
-                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--primary)', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</div>
+                  {(tasks[status] || []).map(task => {
+                    const taskText = typeof task === 'string' ? task : task.text;
+                    const taskAssigneeName = typeof task === 'string' ? 'Anu' : (task.assignee || 'Anu');
+                    return (
+                      <div 
+                        key={typeof task === 'string' ? task : task.id} 
+                        className="glass-card" 
+                        style={{ padding: '12px', marginBottom: '12px', fontSize: '0.85rem', cursor: 'grab' }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task, status)}
+                      >
+                        <div style={{ marginBottom: '8px', wordBreak: 'break-word', fontWeight: 500 }}>{taskText}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 600 }} title={`Assigned to ${taskAssigneeName}`}>
+                              {taskAssigneeName[0].toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{taskAssigneeName}</span>
+                          </div>
+                          
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(task, status);
+                            }} 
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '4px', color: '#f87171', cursor: 'pointer', padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete task"
+                          >
+                            Delete
+                          </button>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>2d ago</span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {activeInputColumn === status ? (
                     <div style={{ marginTop: '8px' }}>
@@ -578,6 +838,20 @@ const Workspace = () => {
                           if (e.key === 'Enter') handleAddTask(status);
                         }}
                       />
+                      
+                      <div style={{ marginBottom: '8px' }}>
+                        <select 
+                          value={taskAssignee} 
+                          onChange={(e) => setTaskAssignee(e.target.value)}
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '0.8rem' }}
+                        >
+                          <option value="">Assign To...</option>
+                          {team.map(m => (
+                            <option key={m.name} value={m.name}>{m.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button className="btn-primary" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => handleAddTask(status)}>Add</button>
                         <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: '0.75rem' }} onClick={() => setActiveInputColumn(null)}>Cancel</button>
@@ -588,6 +862,7 @@ const Workspace = () => {
                       onClick={() => {
                         setActiveInputColumn(status);
                         setInlineTaskText('');
+                        setTaskAssignee(team[0] ? team[0].name : 'Anu');
                       }}
                       style={{ width: '100%', padding: '8px', border: '1px dashed var(--border)', borderRadius: '8px', background: 'transparent', color: 'var(--text-dim)', fontSize: '0.8rem', cursor: 'pointer' }}
                     >
@@ -643,21 +918,55 @@ const Workspace = () => {
                 <div>
                   <h3 style={{ marginBottom: '20px' }}>Team Output Tracking</h3>
                   <div style={{ display: 'grid', gap: '16px' }}>
-                    {team.map(m => (
-                      <div key={m.name} className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: 'white', fontWeight: 600 }}>{m.name[0].toUpperCase()}</div>
-                          <div>
-                            <h4 style={{ fontSize: '1rem', margin: '0 0 4px 0' }}>{m.name} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({m.role})</span></h4>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Completed Tasks: {m.contributions || 0}</div>
+                    {team.map(m => {
+                      const completedCount = getCompletedTasksForMember(m.name).length;
+                      const isExpanded = expandedMemberTasks === m.name;
+                      return (
+                        <div 
+                          key={m.name} 
+                          className="glass-card" 
+                          onClick={() => setExpandedMemberTasks(isExpanded ? null : m.name)}
+                          style={{ 
+                            padding: '16px', 
+                            cursor: 'pointer', 
+                            transition: 'all 0.2s', 
+                            border: isExpanded ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            background: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.01)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: 'white', fontWeight: 600 }}>{m.name[0].toUpperCase()}</div>
+                              <div>
+                                <h4 style={{ fontSize: '1rem', margin: '0 0 4px 0' }}>{m.name} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({m.role})</span></h4>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Completed Tasks: {completedCount}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div className={`badge ${m.activity === 'High' ? 'badge-success' : 'badge-info'}`} style={{ marginBottom: '4px' }}>{m.activity || "High"} Activity</div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click to view tasks</div>
+                            </div>
                           </div>
+
+                          {isExpanded && (
+                            <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '8px' }}>Tasks Completed by {m.name}:</div>
+                              {completedCount > 0 ? (
+                                <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: '1.6' }}>
+                                  {getCompletedTasksForMember(m.name).map((t, idx) => (
+                                    <li key={idx} style={{ marginBottom: '4px' }}>{t}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                  No completed tasks yet. Assign tasks in the Task Board and move them to Done!
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div className={`badge ${m.activity === 'High' ? 'badge-success' : 'badge-info'}`} style={{ marginBottom: '4px' }}>{m.activity} Activity</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Active</div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -774,7 +1083,11 @@ const Workspace = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h3 style={{ margin: 0 }}>Project Docs & Assets</h3>
                 <button 
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setNewDocName('');
+                    setShowUploadModal(true);
+                  }}
                   className="btn-primary" 
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
                 >
@@ -784,21 +1097,43 @@ const Workspace = () => {
 
               <div style={{ display: 'grid', gap: '12px' }}>
                 {docsList.map(doc => (
-                  <div key={doc.name} className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div 
+                    key={doc.name} 
+                    className="glass-card doc-hover-card" 
+                    style={{ 
+                      padding: '16px', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out'
+                    }} 
+                    onClick={() => handleOpenFile(doc)}
+                    title="Click to open file in a new tab"
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Files size={20} color="var(--primary)" />
                       </div>
                       <div>
-                        <h4 style={{ fontSize: '0.95rem', margin: '0 0 4px 0' }}>{doc.name}</h4>
+                        <h4 style={{ fontSize: '0.95rem', margin: '0 0 4px 0', textDecoration: 'underline', color: 'var(--text-main)' }}>{doc.name}</h4>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
                           {doc.type} • {doc.size} • Uploaded by {doc.uploader} • {doc.date}
                         </div>
                       </div>
                     </div>
-                    <button className="btn-outline" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => alert(`Downloading ${doc.name}...`)}>
-                      Download
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                      <button className="btn-outline" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => handleDownload(doc)}>
+                        Download
+                      </button>
+                      <button 
+                        className="btn-outline" 
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }} 
+                        onClick={() => handleDeleteFile(doc.name)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -812,6 +1147,30 @@ const Workspace = () => {
                     style={{ padding: '32px', maxWidth: '400px', width: '100%' }}
                   >
                     <h3 style={{ marginBottom: '16px' }}>Upload Document</h3>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Choose File</label>
+                      <input 
+                        type="file" 
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setSelectedFile(file);
+                            setNewDocName(file.name);
+                            // Determine type based on extension
+                            const ext = file.name.split('.').pop().toLowerCase();
+                            if (ext === 'pdf') setNewDocType('PDF');
+                            else if (ext === 'docx' || ext === 'doc') setNewDocType('Word');
+                            else if (ext === 'fig') setNewDocType('Figma');
+                            else if (ext === 'md') setNewDocType('Markdown');
+                            else if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext)) setNewDocType('Image');
+                            else setNewDocType('File');
+                          }
+                        }}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', color: 'white' }}
+                      />
+                    </div>
+
                     <div style={{ marginBottom: '16px' }}>
                       <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Document Name</label>
                       <input 
@@ -829,7 +1188,7 @@ const Workspace = () => {
                         onChange={(e) => setNewDocType(e.target.value)}
                         className="custom-select"
                       >
-                        {['PDF', 'Figma', 'Word', 'Markdown', 'Image'].map(t => <option key={t}>{t}</option>)}
+                        {['PDF', 'Figma', 'Word', 'Markdown', 'Image', 'File'].map(t => <option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -838,19 +1197,35 @@ const Workspace = () => {
                         className="btn-primary" 
                         onClick={() => {
                           if (!newDocName.trim()) return;
-                          setDocsList([
-                            ...docsList,
-                            {
+
+                          const addDoc = (contentDataUrl = null) => {
+                            const newDoc = {
                               name: newDocName.trim(),
                               type: newDocType,
-                              size: "1.2 MB",
+                              size: selectedFile ? formatBytes(selectedFile.size) : "1.2 MB",
                               uploader: currentUser?.name || "You",
-                              date: "Just now"
-                            }
-                          ]);
-                          setNewDocName('');
-                          setShowUploadModal(false);
-                          alert(`${newDocName} successfully uploaded to workspace!`);
+                              date: "Just now",
+                              content: contentDataUrl
+                            };
+                            const updatedDocs = [...docsList, newDoc];
+                            setDocsList(updatedDocs);
+                            userService.updateProblem(selectedProblem.id, { docs: updatedDocs });
+                            
+                            setNewDocName('');
+                            setSelectedFile(null);
+                            setShowUploadModal(false);
+                            alert(`${newDocName} successfully uploaded to workspace!`);
+                          };
+
+                          if (selectedFile) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              addDoc(event.target.result);
+                            };
+                            reader.readAsDataURL(selectedFile);
+                          } else {
+                            addDoc();
+                          }
                         }}
                       >
                         Upload
@@ -859,6 +1234,158 @@ const Workspace = () => {
                   </motion.div>
                 </div>
               )}
+            </div>
+          ) : activeTab === 'graph' ? (
+            <div className="glass-panel" style={{ padding: '32px' }}>
+              <h3 style={{ marginBottom: '8px' }}>Project Progress Timeline</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.9rem' }}>
+                Hover over the data nodes on the progress curve to see details and team member attributions.
+              </p>
+
+              <div style={{ position: 'relative', width: '100%', minHeight: '380px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                
+                {/* SVG Graph */}
+                <svg width="100%" height="240" viewBox="0 0 600 240" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3"/>
+                      <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0"/>
+                    </linearGradient>
+                    <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="var(--primary)"/>
+                      <stop offset="100%" stopColor="var(--secondary)"/>
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="6" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  {/* Grid Lines */}
+                  <line x1="0" y1="40" x2="600" y2="40" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                  <line x1="0" y1="100" x2="600" y2="100" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                  <line x1="0" y1="160" x2="600" y2="160" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                  <line x1="0" y1="220" x2="600" y2="220" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+
+                  {/* Graph Line & Area */}
+                  {(() => {
+                    const dataPoints = getTasksForGraph();
+                    if (dataPoints.length === 0) return null;
+
+                    const width = 600;
+                    const height = 240;
+                    const padding = 40;
+                    const plotWidth = width - padding * 2;
+                    const plotHeight = height - padding * 2;
+
+                    const coords = dataPoints.map((pt, index) => {
+                      const x = padding + (index / Math.max(dataPoints.length - 1, 1)) * plotWidth;
+                      // Normalize y: val is between 0 and 100
+                      const y = height - padding - (pt.val / 100) * plotHeight;
+                      return { x, y, ...pt };
+                    });
+
+                    // Build path
+                    let linePath = `M ${coords[0].x} ${coords[0].y}`;
+                    for (let i = 1; i < coords.length; i++) {
+                      // Smooth curve
+                      const xc = (coords[i - 1].x + coords[i].x) / 2;
+                      const yc = (coords[i - 1].y + coords[i].y) / 2;
+                      linePath += ` Q ${coords[i - 1].x} ${coords[i - 1].y}, ${xc} ${yc} T ${coords[i].x} ${coords[i].y}`;
+                    }
+
+                    const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${height - padding} L ${coords[0].x} ${height - padding} Z`;
+
+                    return (
+                      <>
+                        {/* Area Fill */}
+                        <path d={areaPath} fill="url(#areaGradient)" />
+
+                        {/* Stroke Line */}
+                        <path d={linePath} fill="none" stroke="url(#lineGradient)" strokeWidth="4" filter="url(#glow)" />
+
+                        {/* Interactive Data Dots */}
+                        {coords.map((c, i) => (
+                          <g key={c.id}>
+                            <circle 
+                              cx={c.x} 
+                              cy={c.y} 
+                              r="8" 
+                              fill="var(--secondary)" 
+                              stroke="white" 
+                              strokeWidth="2"
+                              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                              onMouseEnter={(e) => {
+                                e.target.setAttribute('r', '12');
+                                setHoveredGraphPoint(c);
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.setAttribute('r', '8');
+                                setHoveredGraphPoint(null);
+                              }}
+                            />
+                            {/* Static text label for day */}
+                            <text x={c.x} y={height - 10} fill="var(--text-muted)" fontSize="9" textAnchor="middle">
+                              {c.task.length > 10 ? `${c.task.substring(0, 8)}...` : c.task}
+                            </text>
+                          </g>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </svg>
+
+                {/* Floating Tooltip */}
+                {hoveredGraphPoint && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(10, 10, 20, 0.95)',
+                    border: '1px solid var(--primary)',
+                    boxShadow: '0 0 20px var(--primary-glow)',
+                    borderRadius: '8px',
+                    padding: '12px 18px',
+                    zIndex: 100,
+                    width: '320px',
+                    backdropFilter: 'blur(10px)',
+                    transition: 'all 0.15s ease'
+                  }}>
+                    <div style={{ fontWeight: 600, color: 'white', marginBottom: '4px', fontSize: '0.9rem' }}>{hoveredGraphPoint.task}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      <span>Completed: {hoveredGraphPoint.date}</span>
+                      <span style={{ color: 'var(--secondary)', fontWeight: 600 }}>Progress Index: {hoveredGraphPoint.val}%</span>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
+                        {hoveredGraphPoint.assignee[0].toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'white' }}>
+                        Worked by: <strong style={{ color: 'var(--primary-light)' }}>{hoveredGraphPoint.assignee}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Fallback if no hovered graph point */}
+                {!hoveredGraphPoint && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px dashed var(--border)',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-muted)'
+                  }}>
+                    Hover over any dot on the chart to reveal contributor details
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
         </div>
