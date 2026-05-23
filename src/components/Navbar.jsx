@@ -7,6 +7,8 @@ import { userService } from '../data/userService';
 const Navbar = ({ user }) => {
   const location = useLocation();
   const currentUser = user || userService.getCurrentUser();
+  const myWorkspaces = userService.getJoinedProblems();
+  const latestWorkspaceId = myWorkspaces.length > 0 ? myWorkspaces[myWorkspaces.length - 1].id : 1;
 
   const handleLogout = () => {
     userService.logout();
@@ -16,7 +18,7 @@ const Navbar = ({ user }) => {
   const navLinks = [
     { path: '/hub', label: 'Problem Hub', icon: Hub },
     { path: '/builder', label: 'I Want to Build', icon: Hammer },
-    { path: '/workspace/1', label: 'Workspace', icon: Layout },
+    { path: `/workspace/${latestWorkspaceId}`, label: 'Workspace', icon: Layout },
     { path: '/profile', label: 'Portfolio', icon: User },
   ];
 
@@ -48,7 +50,9 @@ const Navbar = ({ user }) => {
         <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           {navLinks.map((link) => {
             const Icon = link.icon;
-            const isActive = location.pathname === link.path;
+            const isActive = (location.pathname.startsWith('/workspace') && link.path.startsWith('/workspace'))
+              ? true
+              : location.pathname === link.path;
             return (
               <Link 
                 key={link.path} 

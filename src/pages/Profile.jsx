@@ -18,7 +18,7 @@ const Profile = () => {
     projects: joinedProblems.map(p => ({
       id: p.id,
       title: p.title,
-      role: p.author === currentUser?.email ? "Owner / Author" : "Contributor",
+      role: p.author && currentUser?.email && userService.areEmailsSimilar(p.author, currentUser.email) ? "Owner / Author" : "Contributor",
       status: p.status || "In Progress",
       impact: p.impact || "High"
     })),
@@ -97,22 +97,23 @@ const Profile = () => {
             </h2>
             <div className="grid-auto">
               {user.projects.map(p => (
-                <motion.div 
-                  key={p.id}
-                  whileHover={{ scale: 1.02 }}
-                  className="glass-card" 
-                  style={{ padding: '24px' }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>{p.status}</span>
-                    <ExternalLink size={16} color="var(--text-dim)" />
-                  </div>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>{p.title}</h3>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Role: {p.role}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                    <Zap size={14} /> {p.impact} Impact Contribution
-                  </div>
-                </motion.div>
+                <Link key={p.id} to={`/workspace/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="glass-card" 
+                    style={{ padding: '24px', height: '100%' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>{p.status}</span>
+                      <ExternalLink size={16} color="var(--text-dim)" />
+                    </div>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>{p.title}</h3>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Role: {p.role}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600 }}>
+                      <Zap size={14} /> {p.impact} Impact Contribution
+                    </div>
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </section>

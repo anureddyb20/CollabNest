@@ -27,12 +27,42 @@ const Workspace = () => {
   const selectedProblem = allProblems.find(p => String(p.id) === String(id)) || problems.find(p => String(p.id) === String(id)) || problems[0];
   
   const currentUser = userService.getCurrentUser();
-  // If the logged-in user has the 'owner' role (from 'I have an idea'), they are the admin of any workspace statement
-  const isOwner = currentUser && currentUser.role === 'owner';
+  
+  // Get all user's workspaces to support dynamic switcher
+  const myWorkspaces = userService.getJoinedProblems();
+  if (selectedProblem && !myWorkspaces.some(w => String(w.id) === String(selectedProblem.id))) {
+    myWorkspaces.push(selectedProblem);
+  }
+
+  // If the logged-in user has the 'owner' role (from 'I have an idea') and is the author of this specific project, they are the admin
+  const isOwner = currentUser && (
+    currentUser.role === 'owner' && 
+    (!selectedProblem.author || userService.areEmailsSimilar(selectedProblem.author, currentUser.email))
+  );
 
   const ownerName = selectedProblem.author 
     ? userService.getUserNameByEmail(selectedProblem.author) 
     : (currentUser?.role === 'owner' ? (currentUser?.name || "Anu") : "Anu");
+
+  // Helper to format event date based on creation timestamp (real-time scaling)
+  const getDynamicEventDate = (offsetMinutes) => {
+    if (selectedProblem.id > 1000000000000) {
+      // It's a dynamic user project
+      const createdTime = Number(selectedProblem.id);
+      const eventTime = Math.max(createdTime, Date.now() - offsetMinutes * 60000);
+      const diffMs = Date.now() - eventTime;
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return "Just now";
+      if (mins < 60) return `${mins} min${mins > 1 ? 's' : ''} ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+      const days = Math.floor(hours / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+    // Fallback for static mock projects
+    if (offsetMinutes === 0) return "Just now";
+    return `${offsetMinutes} days ago`;
+  };
 
 
   // 1. Milestones & Progress State
@@ -142,8 +172,8 @@ const Workspace = () => {
       setRejectedList(initialRejected);
 
       const defaultLogs = [
-        { text: "Alex Rivera joined the team as UI Designer", date: "2 days ago" },
-        { text: `${ownerName} created the project and posted requirements`, date: "3 days ago" }
+        { text: "Alex Rivera joined the team as UI Designer", date: getDynamicEventDate(5) },
+        { text: `${ownerName} created the project and posted requirements`, date: getDynamicEventDate(10) }
       ];
       const initialLogs = latestProblem.contributionsLogs ? [...defaultLogs, ...latestProblem.contributionsLogs] : defaultLogs;
       setContributionLogs(initialLogs);
@@ -172,9 +202,9 @@ const Workspace = () => {
         setDocsList(latestProblem.docs);
       } else {
         const defaultDocs = [
-          { name: `System_Architecture_${latestProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: "3 days ago" },
-          { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: "2 days ago" },
-          { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: ownerName, date: "4 days ago" }
+          { name: `System_Architecture_${latestProblem.title.replace(/\s+/g, '_')}.pdf`, type: "PDF", size: "2.4 MB", uploader: ownerName, date: getDynamicEventDate(5) },
+          { name: "UI_Wireframes_v2.fig", type: "Figma", size: "12.8 MB", uploader: "Alex", date: getDynamicEventDate(2) },
+          { name: "Project_Proposal.docx", type: "Word", size: "1.1 MB", uploader: ownerName, date: getDynamicEventDate(10) }
         ];
         setDocsList(defaultDocs);
       }
@@ -396,13 +426,22 @@ const Workspace = () => {
   };
 
   const getTasksForGraph = () => {
+    // Get list of actual team member names
+    const memberNames = team.map(m => m.name);
+    // Helper to get an assignee that exists in the team (fallback to ownerName or team[0].name)
+    const getValidAssignee = (preferred) => {
+      const matched = memberNames.find(n => n.toLowerCase() === preferred.toLowerCase());
+      if (matched) return matched;
+      return ownerName || (team[0] ? team[0].name : 'Anu');
+    };
+
     // Start with default completed tasks distributed among different team members
     const pts = [
-      { id: "p1", task: "Project Proposal", assignee: "Anu", date: "4 days ago", val: 10 },
-      { id: "p2", task: "System Architecture", assignee: "Shravani", date: "3 days ago", val: 25 },
-      { id: "p3", task: "UI Wireframes v2", assignee: "Alex", date: "2 days ago", val: 50 },
-      { id: "p4", task: "Database Design", assignee: "Bhavana", date: "2 days ago", val: 65 },
-      { id: "p5", task: "Initial Ideation", assignee: "Preksha", date: "1 day ago", val: 80 }
+      { id: "p1", task: "Project Proposal", assignee: getValidAssignee("Anu"), date: getDynamicEventDate(10), val: 10 },
+      { id: "p2", task: "System Architecture", assignee: memberNames[2] || getValidAssignee("Anu"), date: getDynamicEventDate(5), val: 25 },
+      { id: "p3", task: "UI Wireframes v2", assignee: getValidAssignee("Alex"), date: getDynamicEventDate(2), val: 50 },
+      { id: "p4", task: "Database Design", assignee: memberNames[3] || getValidAssignee("Anu"), date: getDynamicEventDate(2), val: 65 },
+      { id: "p5", task: "Initial Ideation", assignee: memberNames[4] || getValidAssignee("Anu"), date: getDynamicEventDate(1), val: 80 }
     ];
 
     // Add tasks in the done column
@@ -615,8 +654,37 @@ const Workspace = () => {
       <div className="glass-panel" style={{ padding: '32px', marginBottom: '32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <h1 style={{ fontSize: '2rem' }}>{selectedProblem.title}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              {myWorkspaces.length > 1 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <select
+                    value={selectedProblem.id}
+                    onChange={(e) => navigate(`/workspace/${e.target.value}`)}
+                    style={{
+                      fontSize: '1.8rem',
+                      fontWeight: 700,
+                      color: 'var(--text-main)',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      maxWidth: '450px',
+                      textOverflow: 'ellipsis',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    {myWorkspaces.map(w => (
+                      <option key={w.id} value={w.id} style={{ background: 'var(--bg-card)', color: 'white' }}>
+                        {w.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <h1 style={{ fontSize: '2rem' }}>{selectedProblem.title}</h1>
+              )}
               <span className="badge badge-primary">{stages[stageIndex]}</span>
               {isOwner && (
                 <button 

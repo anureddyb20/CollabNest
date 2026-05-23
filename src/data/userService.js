@@ -261,7 +261,7 @@ export const userService = {
     if (!user) return [];
     
     const all = getGlobalProblems();
-    return all.filter(p => (user.joined || []).some(id => String(id) === String(p.id)) || p.author === session.email);
+    return all.filter(p => (user.joined || []).some(id => String(id) === String(p.id)) || (p.author && areEmailsSimilar(p.author, session.email)));
   },
 
   getSavedProblems: () => {
@@ -283,7 +283,7 @@ export const userService = {
     if (!user) return [];
     
     const all = getGlobalProblems();
-    return all.filter(p => (user.submissions || []).some(id => String(id) === String(p.id)) || p.author === session.email);
+    return all.filter(p => (user.submissions || []).some(id => String(id) === String(p.id)) || (p.author && areEmailsSimilar(p.author, session.email)));
   },
 
   getApplicantsForProblem: (problemId) => {

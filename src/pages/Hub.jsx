@@ -259,7 +259,7 @@ const Hub = ({ user: initialUser }) => {
                 >
                   {/* Action Layer - HIGHEST Z-INDEX */}
                   <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '10px', zIndex: 100 }}>
-                    {p.author === userData.email && (
+                    {p.author && userData.email && userService.areEmailsSimilar(p.author, userData.email) && (
                       <button 
                         type="button"
                         onClick={(e) => {
@@ -335,7 +335,7 @@ const Hub = ({ user: initialUser }) => {
                       </div>
                       
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {activeSidebar === 'Problems' && p.author !== userData.email && !userData.joined.some(id => String(id) === String(p.id)) && (
+                        {activeSidebar === 'Problems' && (!p.author || !userData.email || !userService.areEmailsSimilar(p.author, userData.email)) && !userData.joined.some(id => String(id) === String(p.id)) && (
                           userData.submissions.some(id => String(id) === String(p.id)) ? (
                             <span style={{ color: '#4ade80', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginRight: '8px' }}>
                               ✓ Submitted
@@ -351,7 +351,7 @@ const Hub = ({ user: initialUser }) => {
                           )
                         )}
                         
-                        {p.author === userData.email ? (
+                        {p.author && userData.email && userService.areEmailsSimilar(p.author, userData.email) ? (
                           <span style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                             👑 Owner
                           </span>
