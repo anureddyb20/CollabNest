@@ -30,11 +30,12 @@ const Onboarding = ({ setUser }) => {
         navigate('/hub');
       } else {
         const allProblems = userService.getAllProblems();
-        const existingProblem = allProblems.find(
+        const myProblems = allProblems.filter(
           p => p.author && userService.areEmailsSimilar(p.author, session.email)
         );
-        if (existingProblem) {
-          navigate(`/workspace/${existingProblem.id}`);
+        if (myProblems.length > 0) {
+          myProblems.sort((a, b) => Number(b.id) - Number(a.id));
+          navigate(`/workspace/${myProblems[0].id}`);
         } else {
           navigate('/hub');
         }
@@ -59,11 +60,12 @@ const Onboarding = ({ setUser }) => {
           navigate('/hub');
         } else {
           const allProblems = userService.getAllProblems();
-          const existingProblem = allProblems.find(
+          const myProblems = allProblems.filter(
             p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)
           );
-          if (existingProblem) {
-            navigate(`/workspace/${existingProblem.id}`);
+          if (myProblems.length > 0) {
+            myProblems.sort((a, b) => Number(b.id) - Number(a.id));
+            navigate(`/workspace/${myProblems[0].id}`);
           } else {
             navigate('/hub');
           }
@@ -77,12 +79,13 @@ const Onboarding = ({ setUser }) => {
       
       if (isLoginMode) {
         const allProblems = userService.getAllProblems();
-        const existingProblem = allProblems.find(
+        const myProblems = allProblems.filter(
           p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)
         );
         
-        if (existingProblem) {
-          navigate(`/workspace/${existingProblem.id}`);
+        if (myProblems.length > 0) {
+          myProblems.sort((a, b) => Number(b.id) - Number(a.id));
+          navigate(`/workspace/${myProblems[0].id}`);
         } else if (finalUser.role === 'builder') {
           navigate('/hub');
         } else {
@@ -103,12 +106,13 @@ const Onboarding = ({ setUser }) => {
     
     if (selectedRole === 'owner') {
       const allProblems = userService.getAllProblems();
-      const existingProblem = allProblems.find(
+      const myProblems = allProblems.filter(
         p => p.author && userService.areEmailsSimilar(p.author, finalUser.email)
       );
       
-      if (existingProblem) {
-        navigate(`/workspace/${existingProblem.id}`);
+      if (myProblems.length > 0) {
+        myProblems.sort((a, b) => Number(b.id) - Number(a.id));
+        navigate(`/workspace/${myProblems[0].id}`);
       } else {
         setStep(3);
       }

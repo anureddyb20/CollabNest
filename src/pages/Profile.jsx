@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Award, Shield, Star, Share2, Download, Briefcase, Zap, ExternalLink } from 'lucide-react';
 import { userService } from '../data/userService';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,12 @@ import { Link } from 'react-router-dom';
 const Profile = () => {
   const currentUser = userService.getCurrentUser();
   const joinedProblems = userService.getJoinedProblems();
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const user = {
     name: currentUser?.name || "Guest Builder",
@@ -26,6 +32,69 @@ const Profile = () => {
       { from: "Sam", rating: 5, comment: "Amazing technical skills and great communication." },
       { from: "Jo", rating: 5, comment: "Always delivers on time. High accountability." }
     ]
+  };
+
+  const handleSharePortfolio = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => showToast("Portfolio link copied to clipboard!"))
+      .catch(() => showToast("Failed to copy link."));
+  };
+
+  const handleDownloadCV = () => {
+    const cvContent = `
+==================================================
+              COCREATEX BUILDER RESUME
+==================================================
+
+1. PROFILE SUMMARY
+--------------------------------------------------
+Name:         ${user.name}
+Role:         ${user.role}
+Reputation:   ${user.reputation} XP
+Consistency:  ${user.consistency}
+
+2. KEY SKILLS & EXPERTISE
+--------------------------------------------------
+${user.skills.join(' • ')}
+
+3. REPUTATION BADGES
+--------------------------------------------------
+${user.badges.join(' • ')}
+
+4. PROJECT PORTFOLIO & IMPACT
+--------------------------------------------------
+${user.projects.length > 0 ? user.projects.map((p, index) => `
+[Project #${index + 1}]
+Title:  ${p.title}
+Role:   ${p.role}
+Status: ${p.status}
+Impact: ${p.impact} Contribution
+`).join('\n') : "No projects in portfolio yet."}
+
+5. PEER COLLABORATOR REVIEWS
+--------------------------------------------------
+${user.reviews.map((r, index) => `
+Review #${index + 1} from ${r.from}:
+"${r.comment}"
+Rating: ${'★'.repeat(r.rating)}
+`).join('\n')}
+
+--------------------------------------------------
+Generated via CoCreateX Hub on ${new Date().toLocaleDateString()}
+==================================================
+`.trim();
+
+    const blob = new Blob([cvContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `CV_${user.name.replace(/\s+/g, '_')}_Resume.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showToast("CV text file downloaded successfully!");
   };
 
   const initials = user.name
@@ -66,10 +135,18 @@ const Profile = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+              <button 
+                onClick={handleSharePortfolio}
+                className="btn-primary" 
+                style={{ width: '100%', justifyContent: 'center', cursor: 'pointer' }}
+              >
                 <Share2 size={18} /> Share Portfolio
               </button>
-              <button className="btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+              <button 
+                onClick={handleDownloadCV}
+                className="btn-outline" 
+                style={{ width: '100%', justifyContent: 'center', cursor: 'pointer' }}
+              >
                 <Download size={18} /> Download CV
               </button>
             </div>
@@ -139,6 +216,36 @@ const Profile = () => {
           </section>
         </div>
       </div>
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            style={{
+              position: 'fixed',
+              bottom: '40px',
+              left: '50%',
+              x: '-50%',
+              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+              color: '#FFFFFF',
+              padding: '12px 24px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 30px rgba(108, 99, 255, 0.25)',
+              zIndex: 1000,
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <Award size={16} color="white" />
+            <span style={{ color: 'white' }}>{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

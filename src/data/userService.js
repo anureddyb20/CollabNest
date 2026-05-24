@@ -52,6 +52,26 @@ export const userService = {
     const users = getAllUsers();
     const email = userData.email.toLowerCase().trim();
     
+    // Claim any Guest/unauthored problems posted on this local machine
+    const stored = localStorage.getItem(PROBLEMS_KEY);
+    if (stored) {
+      try {
+        const userProblems = JSON.parse(stored);
+        let updated = false;
+        userProblems.forEach(p => {
+          if (!p.author || p.author === 'Guest') {
+            p.author = email;
+            updated = true;
+          }
+        });
+        if (updated) {
+          localStorage.setItem(PROBLEMS_KEY, JSON.stringify(userProblems));
+        }
+      } catch (e) {
+        console.error("Error claiming guest problems:", e);
+      }
+    }
+
     if (users[email]) {
       // User exists, save their email in session
       // If they have posted problems (with typo-tolerant check), set/upgrade role to 'owner'
@@ -163,13 +183,16 @@ export const userService = {
       const users = getAllUsers();
       const user = users[session.email];
       if (user) {
+        if (!user.joined) user.joined = [];
+        if (!user.submissions) user.submissions = [];
+        
         if (!user.joined.includes(problemId)) {
           user.joined.push(problemId);
         }
         if (!user.submissions.includes(problemId)) {
           user.submissions.push(problemId);
         }
-        user.reputation += 20; // Extra XP for posting
+        user.reputation = (user.reputation || 0) + 20; // Extra XP for posting
         saveUsers(users);
       }
     }
@@ -206,10 +229,13 @@ export const userService = {
     const user = users[session.email];
     if (!user) return;
     
+    if (!user.joined) user.joined = [];
+    if (!user.submissions) user.submissions = [];
+    
     const joinedExists = user.joined.some(id => String(id) === String(problemId));
     if (!joinedExists) {
       user.joined.push(problemId);
-      user.reputation += 10;
+      user.reputation = (user.reputation || 0) + 10;
     }
 
     const subExists = user.submissions.some(id => String(id) === String(problemId));
@@ -228,6 +254,8 @@ export const userService = {
     const user = users[session.email];
     if (!user) return;
     
+    if (!user.saved) user.saved = [];
+    
     const savedExists = user.saved.some(id => String(id) === String(problemId));
     if (!savedExists) {
       user.saved.push(problemId);
@@ -244,6 +272,8 @@ export const userService = {
     const users = getAllUsers();
     const user = users[session.email];
     if (!user) return;
+    
+    if (!user.submissions) user.submissions = [];
     
     const exists = user.submissions.some(id => String(id) === String(problemId));
     if (!exists) {

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, TrendingUp, Users, Clock, Target, Plus, ChevronRight, Bookmark, Trash2 } from 'lucide-react';
+import { Search, Filter, TrendingUp, Users, Clock, Target, Plus, ChevronRight, Bookmark, Trash2, Briefcase } from 'lucide-react';
 import { problems } from '../data/problems';
 import { userService } from '../data/userService';
 
@@ -18,6 +18,14 @@ const Hub = ({ user: initialUser }) => {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const isProblemMine = (p, userObj) => {
+    if (!userObj) return false;
+    const isAuthor = p.author && userService.areEmailsSimilar(p.author, userObj.email);
+    const isJoined = userObj.joined && userObj.joined.some(id => String(id) === String(p.id));
+    const isSubmitted = userObj.submissions && userObj.submissions.some(id => String(id) === String(p.id));
+    return isAuthor || isJoined || isSubmitted;
+  };
+
   useEffect(() => {
     const user = userService.getCurrentUser() || { joined: [], saved: [], submissions: [], reputation: 0 };
     setUserData(user);
@@ -26,11 +34,23 @@ const Hub = ({ user: initialUser }) => {
     const all = userService.getAllProblems();
 
     if (activeSidebar === 'Problems') {
-      list = all;
+      list = [...all];
+      if (user && user.email) {
+        list.sort((a, b) => {
+          const aIsMine = isProblemMine(a, user);
+          const bIsMine = isProblemMine(b, user);
+          if (aIsMine && !bIsMine) return -1;
+          if (!aIsMine && bIsMine) return 1;
+          return Number(b.id) - Number(a.id); // Sort in order of posting (newest first)
+        });
+      }
     } else if (activeSidebar === 'Teams') {
       list = userService.getJoinedProblems();
     } else if (activeSidebar === 'Submissions') {
       list = userService.getSubmissions();
+    } else if (activeSidebar === 'MyProblems') {
+      list = all.filter(p => isProblemMine(p, user));
+      list.sort((a, b) => Number(b.id) - Number(a.id)); // Sort in order of posting (newest first)
     } else if (activeSidebar === 'Saved') {
       list = userService.getSavedProblems();
     }
@@ -159,6 +179,13 @@ const Hub = ({ user: initialUser }) => {
                   <Target size={18} style={{ marginRight: '10px' }} /> Submissions
                 </button>
                 <button 
+                  className={`btn-ghost btn-ghost-primary ${activeSidebar === 'MyProblems' ? 'active' : ''}`}
+                  onClick={() => setActiveSidebar('MyProblems')}
+                  style={{ justifyContent: 'flex-start', width: '100%' }}
+                >
+                  <Briefcase size={18} style={{ marginRight: '10px' }} /> My Posted Statements
+                </button>
+                <button 
                   className={`btn-ghost btn-ghost-primary ${activeSidebar === 'Saved' ? 'active' : ''}`}
                   onClick={() => setActiveSidebar('Saved')}
                   style={{ justifyContent: 'flex-start', width: '100%' }}
@@ -178,12 +205,14 @@ const Hub = ({ user: initialUser }) => {
               <h1 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
                 {activeSidebar === 'Problems' ? 'Problem Hub' : 
                  activeSidebar === 'Teams' ? 'My Joined Teams' :
-                 activeSidebar === 'Submissions' ? 'My Submissions' : 'Saved Problems'}
+                 activeSidebar === 'Submissions' ? 'My Submissions' : 
+                 activeSidebar === 'MyProblems' ? 'My Posted Statements' : 'Saved Problems'}
               </h1>
               <p style={{ color: 'var(--text-muted)' }}>
                 {activeSidebar === 'Problems' ? 'Explore curated challenges and find your next mission.' : 
                  activeSidebar === 'Teams' ? 'Keep track of projects you are building.' :
-                 activeSidebar === 'Submissions' ? 'Manage your proposals and validations.' : 'Your personal collection of interesting problems.'}
+                 activeSidebar === 'Submissions' ? 'Manage your proposals and validations.' : 
+                 activeSidebar === 'MyProblems' ? 'All the problem statements you have posted.' : 'Your personal collection of interesting problems.'}
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -233,13 +262,13 @@ const Hub = ({ user: initialUser }) => {
             </div>
           )}
 
-          {/* Grid */}
+          {/* Grid / List */}
           <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
-              gap: '24px'
-            }}
+            style={
+              activeSidebar === 'MyProblems'
+                ? { display: 'flex', flexDirection: 'column', gap: '24px' }
+                : { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }
+            }
           >
             <AnimatePresence mode="popLayout">
               {displayProblems.length > 0 ? displayProblems.map((p, i) => (
@@ -252,7 +281,7 @@ const Hub = ({ user: initialUser }) => {
                   className="glass-card"
                   style={{ 
                     position: 'relative',
-                    minHeight: '400px',
+                    minHeight: activeSidebar === 'MyProblems' ? 'auto' : '400px',
                     height: '100%',
                     overflow: 'hidden'
                   }}

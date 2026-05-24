@@ -33,6 +33,9 @@ const Workspace = () => {
   if (selectedProblem && !myWorkspaces.some(w => String(w.id) === String(selectedProblem.id))) {
     myWorkspaces.push(selectedProblem);
   }
+  
+  // Sort user's workspaces in order of posting (newest first)
+  myWorkspaces.sort((a, b) => Number(b.id) - Number(a.id));
 
   // If the logged-in user has the 'owner' role (from 'I have an idea') and is the author of this specific project, they are the admin
   const isOwner = currentUser && (
@@ -64,6 +67,27 @@ const Workspace = () => {
     return `${offsetMinutes} days ago`;
   };
 
+  const getAssigneeColor = (name) => {
+    if (!name) return 'linear-gradient(135deg, var(--primary), var(--secondary))';
+    const lowerName = name.toLowerCase().trim();
+    let hash = 5381;
+    for (let i = 0; i < lowerName.length; i++) {
+      hash = ((hash << 5) + hash) + lowerName.charCodeAt(i);
+    }
+    const colors = [
+      'linear-gradient(135deg, #6366f1, #a855f7)', // indigo-purple
+      'linear-gradient(135deg, #3b82f6, #06b6d4)', // blue-cyan
+      'linear-gradient(135deg, #ec4899, #f43f5e)', // pink-rose
+      'linear-gradient(135deg, #10b981, #3b82f6)', // emerald-blue
+      'linear-gradient(135deg, #f59e0b, #e11d48)', // amber-rose
+      'linear-gradient(135deg, #8b5cf6, #d946ef)', // violet-fuchsia
+      'linear-gradient(135deg, #14b8a6, #0f766e)', // teal-green
+      'linear-gradient(135deg, #f97316, #ea580c)', // orange-dark
+      'linear-gradient(135deg, #0ea5e9, #2563eb)', // sky-blue
+      'linear-gradient(135deg, #84cc16, #22c55e)', // lime-green
+    ];
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   // 1. Milestones & Progress State
   const stages = ['Idea', 'Validation', 'Prototype', 'MVP', 'Launch'];
@@ -190,9 +214,16 @@ const Workspace = () => {
         setTasks(latestProblem.tasks);
       } else {
         const defaultTasks = {
-          todo: ["Implement " + ((latestProblem.skills && latestProblem.skills[0]) || "Frontend"), "Research " + latestProblem.domain + " market"],
-          doing: ["Architecture Setup"],
-          done: ["Initial Ideation"]
+          todo: [
+            { id: "def-todo-1", text: "Implement " + ((latestProblem.skills && latestProblem.skills[0]) || "Frontend"), assignee: "Alex", date: "Just now" },
+            { id: "def-todo-2", text: "Research " + latestProblem.domain + " market", assignee: ownerName, date: "Just now" }
+          ],
+          doing: [
+            { id: "def-doing-1", text: "Architecture Setup", assignee: ownerName, date: "Just now" }
+          ],
+          done: [
+            { id: "def-done-1", text: "Initial Ideation", assignee: "Alex", date: "Just now" }
+          ]
         };
         setTasks(defaultTasks);
       }
@@ -758,7 +789,7 @@ const Workspace = () => {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: 'white' }}>{m.name[0].toUpperCase()}</div>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: getAssigneeColor(m.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: 'white' }}>{m.name[0].toUpperCase()}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, textDecoration: 'underline' }}>{m.name}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{m.role}</div>
@@ -869,10 +900,45 @@ const Workspace = () => {
                         <div style={{ marginBottom: '8px', wordBreak: 'break-word', fontWeight: 500 }}>{taskText}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 600 }} title={`Assigned to ${taskAssigneeName}`}>
+                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: getAssigneeColor(taskAssigneeName), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 600 }} title={`Assigned to ${taskAssigneeName}`}>
                               {taskAssigneeName[0].toUpperCase()}
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{taskAssigneeName}</span>
+                            <select
+                              value={taskAssigneeName}
+                              onChange={(e) => {
+                                const newAssignee = e.target.value;
+                                const updatedTasks = { ...tasks };
+                                const taskIndex = (updatedTasks[status] || []).findIndex(t => {
+                                  const id = typeof t === 'string' ? t : t.id;
+                                  return id === (typeof task === 'string' ? task : task.id);
+                                });
+                                if (taskIndex !== -1) {
+                                  const t = updatedTasks[status][taskIndex];
+                                  if (typeof t === 'string') {
+                                    updatedTasks[status][taskIndex] = {
+                                      id: t,
+                                      text: t,
+                                      assignee: newAssignee,
+                                      date: 'Just now'
+                                    };
+                                  } else {
+                                    updatedTasks[status][taskIndex] = {
+                                      ...t,
+                                      assignee: newAssignee
+                                    };
+                                  }
+                                  setTasks(updatedTasks);
+                                  userService.updateProblem(selectedProblem.id, { tasks: updatedTasks });
+                                }
+                              }}
+                              className="task-assignee-select"
+                            >
+                              {team.map(m => (
+                                <option key={m.name} value={m.name} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                  {m.name}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                           
                           <button 
@@ -1513,6 +1579,10 @@ const Workspace = () => {
               e.preventDefault();
               const createdProblem = userService.addProblem(newIdea);
               setShowPostAnotherModal(false);
+              setNewIdea({ 
+                title: '', domain: 'Sustainability', difficulty: 'Medium', desc: '', skills: [],
+                expectedOutcome: '', projectGoals: '', teamSize: 5
+              });
               // Navigate to the new workspace
               navigate(`/workspace/${createdProblem.id}`);
             }}>
@@ -1640,7 +1710,7 @@ const Workspace = () => {
             <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '24px' }}>
               <div style={{ 
                 width: '80px', height: '80px', borderRadius: '50%', 
-                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                background: getAssigneeColor(selectedMemberProfile.name),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '2rem', fontWeight: 700, color: 'white',
                 boxShadow: '0 0 15px var(--primary-glow)'
