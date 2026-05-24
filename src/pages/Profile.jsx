@@ -43,7 +43,7 @@ const Profile = () => {
   const handleDownloadCV = () => {
     const cvContent = `
 ==================================================
-              COCREATEX BUILDER RESUME
+              COLLABNEST BUILDER RESUME
 ==================================================
 
 1. PROFILE SUMMARY
@@ -80,7 +80,7 @@ Rating: ${'★'.repeat(r.rating)}
 `).join('\n')}
 
 --------------------------------------------------
-Generated via CoCreateX Hub on ${new Date().toLocaleDateString()}
+Generated via CollabNest Hub on ${new Date().toLocaleDateString()}
 ==================================================
 `.trim();
 

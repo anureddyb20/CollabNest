@@ -10,6 +10,19 @@ import {
 import { problems } from '../data/problems';
 import { userService } from '../data/userService';
 
+const getChatsWithFallback = (problemId) => {
+  const newKey = `collabnest_chats_${problemId}`;
+  const oldKey = `cocreatex_chats_${problemId}`;
+  const newVal = localStorage.getItem(newKey);
+  if (newVal) return newVal;
+  const oldVal = localStorage.getItem(oldKey);
+  if (oldVal) {
+    localStorage.setItem(newKey, oldVal);
+    return oldVal;
+  }
+  return null;
+};
+
 const Workspace = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -241,7 +254,7 @@ const Workspace = () => {
       }
 
       // Load chats
-      const storedChats = localStorage.getItem(`cocreatex_chats_${latestProblem.id}`);
+      const storedChats = getChatsWithFallback(latestProblem.id);
       if (storedChats) {
         setChatMessages(JSON.parse(storedChats));
       } else {
@@ -250,7 +263,7 @@ const Workspace = () => {
           { sender: "Alex", text: "Working on the design mockups now.", time: "10:32 AM" }
         ];
         setChatMessages(defaultChats);
-        localStorage.setItem(`cocreatex_chats_${latestProblem.id}`, JSON.stringify(defaultChats));
+        localStorage.setItem(`collabnest_chats_${latestProblem.id}`, JSON.stringify(defaultChats));
       }
     };
 
@@ -586,7 +599,7 @@ const Workspace = () => {
       document.body.removeChild(a);
     } else {
       // Create a mock download
-      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCoCreateX BuilderHub - Collaboration Space.`;
+      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCollabNest - Collaboration Space.`;
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -617,7 +630,7 @@ const Workspace = () => {
         window.open(doc.content, '_blank');
       }
     } else {
-      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCoCreateX BuilderHub - Collaboration Space.`;
+      const content = `Mock document content for: ${doc.name}\nType: ${doc.type}\nUploaded by: ${doc.uploader}\nDate: ${doc.date}\nSize: ${doc.size}\nCollabNest - Collaboration Space.`;
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
@@ -642,7 +655,7 @@ const Workspace = () => {
     };
     const updatedChats = [...chatMessages, newMessage];
     setChatMessages(updatedChats);
-    localStorage.setItem(`cocreatex_chats_${id}`, JSON.stringify(updatedChats));
+    localStorage.setItem(`collabnest_chats_${id}`, JSON.stringify(updatedChats));
     setChatInput('');
   };
 

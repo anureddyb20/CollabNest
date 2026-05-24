@@ -1,10 +1,26 @@
 import { problems } from './problems';
 
-const USERS_KEY = 'cocreatex_users_list';
-const SESSION_KEY = 'cocreatex_current_session';
+const OLD_USERS_KEY = 'cocreatex_users_list';
+const OLD_SESSION_KEY = 'cocreatex_current_session';
+const OLD_PROBLEMS_KEY = 'cocreatex_global_problems';
+
+const USERS_KEY = 'collabnest_users_list';
+const SESSION_KEY = 'collabnest_current_session';
+const PROBLEMS_KEY = 'collabnest_global_problems';
+
+const getLocalStorageWithFallback = (newKey, oldKey) => {
+  const newVal = localStorage.getItem(newKey);
+  if (newVal) return newVal;
+  const oldVal = localStorage.getItem(oldKey);
+  if (oldVal) {
+    localStorage.setItem(newKey, oldVal);
+    return oldVal;
+  }
+  return null;
+};
 
 const getAllUsers = () => {
-  const stored = localStorage.getItem(USERS_KEY);
+  const stored = getLocalStorageWithFallback(USERS_KEY, OLD_USERS_KEY);
   return stored ? JSON.parse(stored) : {};
 };
 
@@ -13,7 +29,7 @@ const saveUsers = (users) => {
 };
 
 const getCurrentSession = () => {
-  const stored = localStorage.getItem(SESSION_KEY);
+  const stored = getLocalStorageWithFallback(SESSION_KEY, OLD_SESSION_KEY);
   return stored ? JSON.parse(stored) : null;
 };
 
@@ -21,10 +37,8 @@ const saveSession = (user) => {
   localStorage.setItem(SESSION_KEY, JSON.stringify(user));
 };
 
-const PROBLEMS_KEY = 'cocreatex_global_problems';
-
 const getGlobalProblems = () => {
-  const stored = localStorage.getItem(PROBLEMS_KEY);
+  const stored = getLocalStorageWithFallback(PROBLEMS_KEY, OLD_PROBLEMS_KEY);
   const userProblems = stored ? JSON.parse(stored) : [];
   
   // Combine static and dynamic problems, ensuring no duplicates by ID
@@ -156,6 +170,7 @@ export const userService = {
 
   logout: () => {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(OLD_SESSION_KEY);
   },
 
   // Problem Management
@@ -163,7 +178,7 @@ export const userService = {
 
   addProblem: (newProblem) => {
     const session = getCurrentSession();
-    const stored = localStorage.getItem(PROBLEMS_KEY);
+    const stored = getLocalStorageWithFallback(PROBLEMS_KEY, OLD_PROBLEMS_KEY);
     const userProblems = stored ? JSON.parse(stored) : [];
     const problemId = Date.now();
     
@@ -355,7 +370,7 @@ export const userService = {
   },
 
   updateProblem: (problemId, updatedFields) => {
-    const stored = localStorage.getItem(PROBLEMS_KEY);
+    const stored = getLocalStorageWithFallback(PROBLEMS_KEY, OLD_PROBLEMS_KEY);
     const userProblems = stored ? JSON.parse(stored) : [];
     
     // Find if the problem already exists in userProblems
